@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Chart details</title>
+  <style>
+    :root{ --cyan:#00bcd4; --ink:#0a0f12; --muted:#64748b; }
+    *{ box-sizing:border-box }
+    html,body{ margin:0; height:100% }
+    body{ background:#fff; color:var(--ink); font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:24px; display:grid; grid-template-columns: 440px 1fr; gap:24px; align-items:start; }
+    .card{ background:#fff; border:1px solid #e6eef2; border-radius:12px; padding:14px; }
+    h1{ margin:0 0 12px; font-size:20px; font-weight:800; letter-spacing:.06em }
+    .muted{ color:var(--muted) }
+    .row{ margin:8px 0; }
+    .k{ font-weight:700; width:170px; display:inline-block; }
+    #chartFrame{ width:100%; height:740px; border:0; display:block; }
+    #back{ display:inline-block; margin-bottom:12px; text-decoration:none; color:#111; font-weight:600 }
+    .pill{ display:inline-block; padding:3px 8px; border:1px solid #e6eef2; border-radius:999px; margin:2px 6px 0 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <a id="back" href="index.html">← Back</a>
+      <h1 id="title"></h1>
+      <iframe id="chartFrame" src="/WORKING.html" loading="eager"></iframe>
+    </div>
+    <div class="card">
+      <h1>Basics</h1>
+      <div class="row"><span class="k">Aura Type:</span> <span id="type"></span></div>
+      <div class="row"><span class="k">Profile:</span> <span id="profile"></span></div>
+      <div class="row"><span class="k">Strategy:</span> <span id="strategy"></span></div>
+      <div class="row"><span class="k">Authority:</span> <span id="authority"></span></div>
+      <div class="row"><span class="k">Incarnation Cross:</span> <span id="cross"></span></div>
+      <div class="row"><span class="k">Defined Channels:</span> <span id="channels"></span></div>
+      <div class="row"><span class="k">Definition:</span> <span id="definition"></span></div>
+      <div class="row"><span class="k">Signature:</span> <span id="signature"></span></div>
+      <div class="row"><span class="k">Not-self theme:</span> <span id="notself"></span></div>
+    </div>
+  </div>
+
+  <script>
+    // Read from sessionStorage (set by index page)
+    let json = null;
+    let name = '';
+    try{
+      json = JSON.parse(sessionStorage.getItem('hd_last_chart') || 'null');
+      name = sessionStorage.getItem('hd_name') || '';
+    }catch(e){}
+
+    document.getElementById('title').textContent = name ? name : 'Chart details';
+
+    // Populate basics (with fallbacks if fields are missing)
+    const get = (k, fb='') => (json && json[k]) ? json[k] : fb;
+    document.getElementById('type').textContent = get('type','—');
+    document.getElementById('profile').textContent = get('profile','—');
+    document.getElementById('strategy').textContent = get('strategy','—');
+    document.getElementById('authority').textContent = get('authority','—');
+    document.getElementById('cross').textContent = get('incarnation_cross','—');
+    document.getElementById('definition').textContent = get('definition','—');
+    document.getElementById('signature').textContent = get('signature','—');
+    document.getElementById('notself').textContent = get('not_self_theme','—');
+
+    const ch = (json && (json.channels_long || json.channels_short)) || [];
+    const chEl = document.getElementById('channels');
+    if(Array.isArray(ch) && ch.length){
+      chEl.innerHTML = ch.map(s => `<span class="pill">${s}</span>`).join('');
+    }else{
+      chEl.textContent = '—';
+    }
+
+    // Render the smaller chart in the iframe
+    (function (){
+      const frame = document.getElementById('chartFrame');
+      const onLoad = () => {
+        try{
+          const doc = frame.contentDocument || frame.contentWindow.document;
+          // Hide dev UI inside working file just in case
+          ['.section','#leftPanel','#centerPanel','#gatePanel','#channelPanel','#workspace','#modeSection','#verticalGuideSection','#dataSection','#gGrid','#gGuide','#grid','#guide','#handles','#centerline','#gCenterline','#controls','#bgfile','#showGrid','#snap','#snapStep','#showGuide','#guideX','#magnet','#centerOnGuide','#save','#load','#loadSampleBtn']
+            .forEach(sel => { doc.querySelectorAll(sel).forEach(el => el.style.display='none'); });
+          const svg = doc.querySelector('svg#svg'); if(svg){ svg.style.width = '100%'; svg.style.background = '#fff'; }
+          frame.contentWindow.applyBodygraph && frame.contentWindow.applyBodygraph(json || {});
+        }catch(e){ console.warn(e); }
+        frame.removeEventListener('load', onLoad);
+      };
+      if (frame.contentDocument && frame.contentDocument.readyState === 'complete') onLoad();
+      else frame.addEventListener('load', onLoad);
+    })();
+  </script>
+</body>
+</html>
