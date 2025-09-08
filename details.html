@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Chart details</title>
+  <style>
+    :root{ --cyan:#00bcd4; --ink:#0a0f12; --muted:#64748b; }
+    *{ box-sizing:border-box }
+    html,body{ margin:0; height:100% }
+    body{ background:#fff; color:var(--ink); font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .wrap{ max-width:1200px; margin:0 auto; padding:24px; }
+    .grid{ display:grid; grid-template-columns:500px 1fr; gap:24px; align-items:start; }
+    .card{ background:#fff; border:1px solid #e6eef2; border-radius:12px; padding:12px }
+    #chartFrame{ width:100%; height:740px; border:0; display:block }
+    h1{ margin:0; font-size:22px }
+    .muted{ color:var(--muted); }
+    .row{ margin:12px 0; font-size:16px }
+    .k{ display:inline-block; width:170px; font-weight:700 }
+    #dl{ float:right; background:#111; color:#fff; border:0; border-radius:10px; padding:8px 12px; cursor:pointer }
+    #back{ text-decoration:none; color:var(--muted) }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px">
+      <a id="back" href="/index.html">← Back</a>
+      <button id="dl">Download PNG</button>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <iframe id="chartFrame" src="/WORKING.html"></iframe>
+      </div>
+      <div>
+        <h1 id="title"></h1>
+        <div id="subtitle" class="muted" style="margin-top:4px; margin-bottom:12px;"></div>
+        <div class="card">
+          <div class="row"><span class="k">Aura Type:</span> <span id="type"></span></div>
+          <div class="row"><span class="k">Profile:</span> <span id="profile"></span></div>
+          <div class="row"><span class="k">Strategy:</span> <span id="strategy"></span></div>
+          <div class="row"><span class="k">Authority:</span> <span id="authority"></span></div>
+          <div class="row"><span class="k">UTC Time:</span> <span id="utc"></span></div>
+          <div class="row"><span class="k">Incarnation Cross:</span> <span id="cross"></span></div>
+          <div class="row"><span class="k">Defined Channels:</span> <span id="channels"></span></div>
+          <div class="row"><span class="k">Definition:</span> <span id="definition"></span></div>
+          <div class="row"><span class="k">Signature:</span> <span id="signature"></span></div>
+          <div class="row"><span class="k">Not-self theme:</span> <span id="notself"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pad = n => String(n).padStart(2,'0');
+    const formatUtc = (iso)=>{ try{ const d=new Date(iso); if(!isFinite(d)) return ''; return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`; }catch(e){ return ''; } };
+
+    function sanitizeIframe(doc){
+      const hide = ['.section','#leftPanel','#centerPanel','#gatePanel','#channelPanel','#workspace','#modeSection','#verticalGuideSection','#dataSection','#gGrid','#gGuide','#grid','#guide','#handles','#centerline','#gCenterline','#controls','#bgfile','#showGrid','#snap','#snapStep','#showGuide','#guideX','#magnet','#centerOnGuide','#save','#load','#loadSampleBtn'];
+      hide.forEach(sel=> doc.querySelectorAll(sel).forEach(el=> el.style.display='none') );
+      const svg = doc.querySelector('svg#svg'); if(svg){ svg.style.background='#fff'; }
+    }
+
+    (function init(){
+      let json = {}; let name = '';
+      try{ const raw = sessionStorage.getItem('hd_last_chart'); if(raw) json = JSON.parse(raw)||{}; }catch(e){}
+      try{ name = sessionStorage.getItem('hd_name')||''; }catch(e){}
+      document.getElementById('title').textContent = name || 'Chart details';
+      const utc = json && json.birth_date_UTC ? formatUtc(json.birth_date_UTC) : '';
+      document.getElementById('subtitle').textContent = utc;
+      document.getElementById('utc').textContent = utc;
+
+      // Basics
+      const get = (k, def='—') => (json && (json[k]||json[k.replace(/-/g,'_')])) || def;
+      document.getElementById('type').textContent = get('type');
+      document.getElementById('profile').textContent = get('profile');
+      document.getElementById('strategy').textContent = get('strategy');
+      document.getElementById('authority').textContent = get('authority');
+      document.getElementById('cross').textContent = get('incarnation_cross','—');
+      const ch = (json.channels_long && json.channels_long.length) ? json.channels_long.join(' · ') :
+                 (json.channels_short && json.channels_short.length) ? json.channels_short.join(' · ') : '—';
+      document.getElementById('channels').textContent = ch;
+      document.getElementById('definition').textContent = get('definition');
+      document.getElementById('signature').textContent = get('signature');
+      document.getElementById('notself').textContent = get('not_self_theme') || get('notself_theme');
+
+      // Render chart into iframe
+      const frame = document.getElementById('chartFrame');
+      const onLoad = ()=>{
+        const doc = frame.contentDocument || frame.contentWindow.document;
+        sanitizeIframe(doc);
+        let tries=0;
+        const tick = setInterval(()=>{
+          try{
+            if(frame.contentWindow && typeof frame.contentWindow.applyBodygraph==='function'){
+              frame.contentWindow.applyBodygraph(json);
+              clearInterval(tick);
+            }
+          }catch(e){}
+          if(++tries>50) clearInterval(tick);
+        }, 100);
+        frame.removeEventListener('load', onLoad);
+      };
+      if (frame.contentDocument && frame.contentDocument.readyState === 'complete') onLoad();
+      else frame.addEventListener('load', onLoad);
+
+      // Download PNG (inline computed styles to preserve colors)
+      document.getElementById('dl').addEventListener('click', async ()=>{
+        try{
+          const doc = frame.contentDocument || frame.contentWindow.document;
+          const svg = doc && doc.querySelector('svg#svg');
+          if(!svg){ alert('Chart not ready yet.'); return; }
+          const clone = svg.cloneNode(true);
+          const oNodes = svg.querySelectorAll('*'); const cNodes = clone.querySelectorAll('*');
+          const win = frame.contentWindow;
+          for(let i=0;i<oNodes.length;i++){
+            const o=oNodes[i], c=cNodes[i]; const cs = win.getComputedStyle(o);
+            if(cs && c){
+              const fill=cs.fill, stroke=cs.stroke, sw=cs.strokeWidth, op=cs.opacity, so=cs.strokeOpacity, fo=cs.fillOpacity;
+              if(fill && fill!=='none') c.setAttribute('fill', fill);
+              if(stroke && stroke!=='none') c.setAttribute('stroke', stroke);
+              if(sw) c.setAttribute('stroke-width', sw);
+              if(op) c.setAttribute('opacity', op);
+              if(so) c.setAttribute('stroke-opacity', so);
+              if(fo) c.setAttribute('fill-opacity', fo);
+            }
+          }
+          clone.setAttribute('xmlns','http://www.w3.org/2000/svg');
+          clone.setAttribute('xmlns:xlink','http://www.w3.org/1999/xlink');
+
+          const serializer = new XMLSerializer();
+          const svgStr = serializer.serializeToString(clone);
+          const img = new Image();
+          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+          await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; });
+
+          const W=1100, H=780;
+          const canvas=document.createElement('canvas'); canvas.width=W; canvas.height=H;
+          const ctx=canvas.getContext('2d');
+          ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+
+          // Watermark
+          ctx.save(); ctx.globalAlpha=.08; ctx.translate(W/2,H/2); ctx.rotate(-Math.PI/6);
+          ctx.font='bold 72px ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial'; ctx.textAlign='center'; ctx.fillStyle='#111';
+          ctx.fillText('Relationship Design Labs', 0, 0); ctx.restore();
+
+          // Chart image
+          ctx.drawImage(img, 0, 20, 440, 740);
+
+          // Title + UTC and basics
+          const name = (document.getElementById('title').textContent||'').trim();
+          const utc2 = (document.getElementById('subtitle').textContent||'').trim();
+          ctx.fillStyle='#0a0f12'; ctx.font='800 22px ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial'; ctx.fillText(name, 220, 32);
+          if(utc2){ ctx.font='600 14px ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial'; ctx.fillText(utc2, 220, 52); }
+
+          const startX=470, startY=40, lh=30;
+          ctx.font='800 20px ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial'; ctx.fillText('Basics', startX, startY);
+          const rows=[['Aura Type',document.getElementById('type').textContent||'—'],['Profile',document.getElementById('profile').textContent||'—'],['Strategy',document.getElementById('strategy').textContent||'—'],['Authority',document.getElementById('authority').textContent||'—'],['UTC Time',document.getElementById('utc').textContent||'—'],['Incarnation Cross',document.getElementById('cross').textContent||'—'],['Defined Channels',document.getElementById('channels').textContent||'—'],['Definition',document.getElementById('definition').textContent||'—'],['Signature',document.getElementById('signature').textContent||'—'],['Not-self theme',document.getElementById('notself').textContent||'—']];
+          let y=startY+2*lh;
+          function wrapText(ctx, text, x, y, maxWidth, lineHeight){ const words=String(text).split(/\s+/); let line=''; let yy=y; for(let n=0;n<words.length;n++){ const test=line+words[n]+' '; if(ctx.measureText(test).width>maxWidth && n>0){ ctx.fillText(line,x,yy); line=words[n]+' '; yy+=lineHeight; } else { line=test; } } ctx.fillText(line, x, yy); }
+          rows.forEach(([k,v])=>{ ctx.font='700 16px ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial'; ctx.fillText(k+':', startX, y); ctx.font='400 16px ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial'; wrapText(ctx, v, startX+170, y, 430, 22); y+=lh; });
+
+          const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); const base=(name||'chart').toLowerCase().replace(/\s+/g,'-'); a.download=base+'-details.png'; a.click();
+        }catch(err){ console.error(err); alert('Could not make PNG yet. Try again in a moment.'); }
+      });
+    })();
+  </script>
+</body>
+</html>
