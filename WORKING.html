@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Bodygraph (working)</title>
+<style>
+  html,body{margin:0;height:100%;background:#fff}
+  #svg{width:780px;height:auto;display:block;margin:0 auto;background:#fff}
+  .hint{font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;color:#333;text-align:center;margin-top:24px}
+</style>
+</head>
+<body>
+  <svg id="svg" viewBox="0 0 720 1080" preserveAspectRatio="xMidYMid meet">
+    <g id="centers"></g>
+    <g id="channels"></g>
+    <g id="gates"></g>
+  </svg>
+  <div class="hint">This is a placeholder WORKING.html. It exposes window.applyBodygraph(json). Replace with your full working chart file when ready.</div>
+<script>
+window.applyBodygraph = function(json){
+  try{
+    const svg = document.getElementById('svg');
+    let old = document.getElementById('dbg'); if(old) old.remove();
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('id','dbg');
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x','360'); t.setAttribute('y','60'); t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-size','18'); t.setAttribute('font-family','system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif');
+    t.textContent = (json && json.type ? json.type+' • ' : '') + (json && json.profile ? json.profile : '');
+    g.appendChild(t);
+    const gates = (json && json.gates) || [];
+    gates.slice(0, 12).forEach((gate, i)=>{
+      const y = 100 + i*28;
+      const tx = document.createElementNS('http://www.w3.org/2000/svg','text');
+      tx.setAttribute('x','360'); tx.setAttribute('y', y);
+      tx.setAttribute('text-anchor','middle'); tx.setAttribute('font-size','16');
+      tx.textContent = 'Gate ' + gate;
+      g.appendChild(tx);
+    });
+    svg.appendChild(g);
+  }catch(e){ console.error(e); }
+};
+</script>
+</body>
+</html>
