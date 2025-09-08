@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Bodygraph Layout Editor v4 — Vertical Guide + Your Mapping</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#141820; --muted:#aab5b8; --ink:#1e2a2e;
+    --thin:#cfd6d6; --p:#141414; --d:#c91515;
+    --centerFill:#fafafa; --centerStroke:#1a2428;
+    --guide:#5aa0ff;
+  }
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:#e9f0f1;font-family: ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .wrap{max-width:1200px;margin:0 auto;padding:16px;display:grid;grid-template-columns: 380px 1fr;gap:14px}
+  .card{background:var(--panel);border-radius:14px;padding:14px;box-shadow:0 8px 36px rgba(0,0,0,.38)}
+  h1{margin:0 0 8px;font-size:18px}
+  h2{margin:14px 0 6px;font-size:14px;color:#c6d2d4}
+  p{margin:6px 0 10px;color:#aab5b8}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  button,select,input[type="number"],input[type="text"],input[type="range"]{
+    padding:8px 10px;border-radius:10px;border:1px solid #2a3436;background:#0d1112;color:#e7efef;cursor:pointer
+  }
+  input[type="file"]{padding:6px 10px;border-radius:10px;border:1px solid #2a3436;background:#0d1112;color:#e7efef}
+  label{font-size:12px;color:#a6b4b7}
+  .canvas{display:flex;justify-content:center;align-items:center;border-radius:12px;overflow:hidden;background:#0b0e10}
+  svg{width:780px;max-width:100%;height:auto;user-select:none;touch-action:none}
+  .grid line{stroke:#222c31;stroke-width:1;opacity:.35}
+  .gate{cursor:grab}
+  .gate.dragging{cursor:grabbing}
+  .center-shape{fill:var(--centerFill);stroke:var(--centerStroke);stroke-width:2;cursor:move}
+  .handle{fill:#fff;stroke:#111;stroke-width:1.2;cursor:nwse-resize}
+  .ctrl{fill:#f2c14e;stroke:#111;stroke-width:1.2;cursor:move}
+  .selected{filter:url(#hl)}
+  .hint{font-size:12px;color:#96a5a8}
+  .section{border-top:1px solid #233036;margin-top:10px;padding-top:10px}
+  .guideLine{stroke:var(--guide);stroke-width:1.5;stroke-dasharray:6 6;opacity:.9}
+
+/* === HD integration overrides v8 === */
+:root { background:#fff; --undef-bg:#fff; }
+html, body { background:#fff; }
+.wrap, .card, .canvas { background:#fff !important; }
+#svg { background:#fff; }
+
+/* Centers */
+.defined-center { fill: #00d5ff !important; stroke: #0a0f12 !important; }
+.undefined-center { fill: var(--undef-bg) !important; stroke: #0a0f12 !important; }
+
+/* Gates */
+.gate-dot { stroke:#111; stroke-width:1.2; transition: opacity .15s; }
+.gate-defined { fill:#111 !important; }  /* used only when defined gate in defined center */
+.gate-text-invert { fill:#fff !important; }
+
+/* Channels */
+.halfstroke { fill: none; stroke-linecap: round; opacity: 1; }
+.base-outline { fill:none; pointer-events:none; stroke:#000; }   /* black edge */
+.base-fill { fill:none; pointer-events:none; stroke: var(--undef-bg); } /* interior stroke matches undefined bg */
+
+/* v8r1: overlay edge + openers */
+.center-edge-top { fill:none; stroke:#0a0f12; pointer-events:none; }
+.center-open { pointer-events:none; }
+
+</style>
+<style>
+/* v8r2: hide A/B handles & labels only (logic unchanged) */
+#ablayer, #ablayer .abHandle, #ablayer .abLabel {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Bodygraph Layout Editor v4</h1>
+      <p>Loaded with <b>your mapping</b> as the default. New: a vertical guide line you can snap to for perfect vertical alignment.</p>
+
+      
+<div class="section">
+  <h2>Birth data → Render</h2>
+  <div class="row">
+    <label style="width:80px">Date</label>
+    <input id="hdDate" type="text" placeholder="DD-MMM-YY" value="05-Sep-90" style="width:140px">
+  </div>
+  <div class="row">
+    <label style="width:80px">Time</label>
+    <input id="hdTime" type="text" placeholder="HH:mm" value="21:17" style="width:140px">
+  </div>
+  <div class="row">
+    <label style="width:80px">Location</label>
+    <input id="hdLoc" type="text" placeholder="City, Country" value="Haarlem, The Netherlands" style="width:260px">
+  </div>
+
+  <div class="row">
+    <button id="renderBtn">Render bodygraph</button>
+    <button id="loadSampleBtn" title="Render built-in sample without calling API">Load sample</button>
+    <span id="renderStatus" class="hint"></span>
+  </div>
+</div>
+<h2>Workspace</h2>
+      <div class="row">
+        <label>Background image</label>
+        <input id="bgfile" type="file" accept="image/*"/>
+      </div>
+      <div class="row">
+        <label><input id="showGrid" type="checkbox" checked/> Show grid</label>
+        <label><input id="snap" type="checkbox" checked/> Snap</label>
+        <label>Snap step (px)</label><input id="snapStep" type="number" min="1" max="20" step="1" value="2" style="width:80px"/>
+        <button id="reset">Reset</button>
+      </div>
+
+      <div class="section">
+        <h2>Vertical guide</h2>
+        <div class="row">
+          <label><input id="showGuide" type="checkbox" checked/> Show vertical guide</label>
+          <label>X</label><input id="guideX" type="number" min="0" max="720" step="1" value="360" style="width:90px"/>
+          <label>Magnet (px)</label><input id="magnet" type="number" min="0" max="40" step="1" value="6" style="width:90px"/>
+          <button id="centerOnGuide">Center selected</button>
+        </div>
+        <p class="hint">Snaps while dragging centers, gates, and channel control points. “Center selected” puts the center’s midpoint or gate exactly on the guide.</p>
+      </div>
+
+      <div class="section">
+        <h2>Mode</h2>
+        <div class="row">
+          <button id="modeCenters">Edit Centers</button>
+          <button id="modeGates">Edit Gates</button>
+          <button id="modeChannels">Edit Channels</button>
+        </div>
+        <p class="hint">Hold <b>Alt</b> while dragging to temporarily disable snapping & magnet.</p>
+      </div>
+
+      <div class="section" id="centerPanel">
+        <h2>Center settings</h2>
+        <div class="row">
+          <label for="centerSelect">Center</label>
+          <select id="centerSelect"></select>
+        </div>
+        <div class="row">
+          <label>W</label><input id="cW" type="number" step="1" style="width:90px">
+          <label>H</label><input id="cH" type="number" step="1" style="width:90px">
+          <label>Rotate</label><input id="cR" type="number" step="1" style="width:90px">
+        </div>
+      </div>
+
+      <div class="section" id="gatePanel">
+        <h2>Gate settings</h2>
+        <div class="row">
+          <label for="gateSelect">Gate</label>
+          <select id="gateSelect"></select>
+        </div>
+        <div class="row">
+          <label>Radius</label><input id="gR" type="range" min="6" max="22" step="1" value="12" style="width:220px">
+          <span id="gRVal" class="kvm">12</span>
+        </div>
+      </div>
+
+      <div class="section" id="channelPanel">
+        <h2>Channel settings</h2>
+        <div class="row">
+          <label for="chSelect">Channel</label>
+          <select id="chSelect"></select>
+        </div>
+        <div class="row">
+          <label>Style</label>
+          <select id="chStyle">
+            <option value="orth">Orthogonal</option>
+            <option value="curve">Curve</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Width</label><input id="chW" type="range" min="2" max="12" step="0.5" value="8" style="width:220px">
+          <span id="chWVal" class="kvm">8</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Data</h2>
+        <div class="row">
+          <button id="save">Download JSON</button>
+          <input id="load" type="file" accept="application/json"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="canvas">
+        <svg id="svg" viewBox="0 0 720 1080" preserveAspectRatio="xMidYMid meet">
+          <defs>
+<mask id="maskSpineOutline" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"></mask>
+
+<!-- v8r1: channels mask (clip centers only, Safari-friendly) -->
+<mask id="clipCenters" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+  <!-- runtime populated with: white rect covering viewBox + black center fills (stroke none) -->
+</mask>
+
+
+<!-- v8: candy stripe template -->
+<pattern id="candyTemplate" patternUnits="userSpaceOnUse" width="12" height="12">
+  <rect width="6" height="12" fill="#111"/>
+  <rect x="6" width="6" height="12" fill="#00d5ff"/>
+</pattern>
+
+            <filter id="hl" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#8ad" flood-opacity="0.6"/>
+            </filter>
+            <pattern id="stripe" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+              <rect width="8" height="8" fill="#fff"></rect>
+              <rect width="4" height="8" fill="#c91515"></rect>
+            </pattern>
+          </defs>
+          <g id="grid" class="grid"></g>
+          <image id="bg" href="" x="0" y="0" width="720" height="1080" opacity="0.55"></image>
+
+          <!-- Vertical guide -->
+          <g id="guide"></g>
+
+          <!-- Centers -->
+          <g id="centers"></g>
+
+          <!-- Channels (below gates) -->
+          <g id="channels"></g>
+
+          <!-- Gates -->
+          <g id="gates"></g>
+
+          <!-- Handles & controls -->
+          <g id="handles"></g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+const svg = document.getElementById('svg');
+const gGrid=document.getElementById('grid');
+const gCenters=document.getElementById('centers');
+const gChannels=document.getElementById('channels');
+const gGates=document.getElementById('gates');
+const gHandles=document.getElementById('handles');
+const gGuide=document.getElementById('guide');
+const bg=document.getElementById('bg');
+
+const USER_MAP = {"centers": [{"id": "Head", "type": "tri", "x": 295, "y": 72.31007385253906, "w": 130, "h": 110, "rot": 0, "dir": "up"}, {"id": "Ajna", "type": "tri", "x": 295, "y": 200, "w": 130, "h": 110, "rot": 0, "dir": "down"}, {"id": "Throat", "type": "rect", "x": 300, "y": 325.3846130371094, "w": 120, "h": 120, "rot": 0, "rx": 18}, {"id": "G", "type": "diamond", "x": 295, "y": 485.552734375, "w": 130, "h": 130, "rot": 45}, {"id": "Ego", "type": "tri", "x": 450.1537780761719, "y": 596.6154174804688, "w": 90, "h": 80, "rot": 152, "dir": "right"}, {"id": "Spleen", "type": "tri", "x": 81.38460540771484, "y": 661.6923217773438, "w": 120, "h": 130, "rot": 180, "dir": "left"}, {"id": "Solar", "type": "tri", "x": 524.7692260742188, "y": 659.0769653320312, "w": 120, "h": 130, "rot": 180, "dir": "right"}, {"id": "Sacral", "type": "rect", "x": 300, "y": 690.4544067382812, "w": 120, "h": 120, "rot": 0, "rx": 18}, {"id": "Root", "type": "rect", "x": 300, "y": 834.3428955078125, "w": 120, "h": 120, "rot": 0, "rx": 18}], "gates": {"1": [360, 481.23394775390625], "2": [360, 621.90234375], "3": [360, 796.8123168945312], "4": [399.69232177734375, 215.07691955566406], "5": [324.8329162597656, 705.1928100585938], "6": [552.923095703125, 723.6923217773438], "7": [323.9074401855469, 513.6246948242188], "8": [360, 432.1850891113281], "9": [392.3907470703125, 795.8869018554688], "10": [289.6658020019531, 550.6427001953125], "11": [385.91259765625, 239.69151306152344], "12": [407.19793701171875, 378.5090026855469], "13": [397.9434509277344, 515.4755859375], "14": [360, 705.1928100585938], "15": [324.8329162597656, 588.5861206054688], "16": [313.7275085449219, 354.4472961425781], "17": [334.08740234375, 240.61697387695312], "18": [94.15384674072266, 768.923095703125], "19": [407.19793701171875, 876.4010009765625], "20": [312.80206298828125, 382.2107849121094], "21": [514.1538696289062, 605.5384521484375], "22": [605.5384521484375, 696], "23": [360, 338.71466064453125], "24": [360, 215.07691955566406], "25": [430.3341979980469, 548.791748046875], "26": [480.9230651855469, 643.3846435546875], "27": [313.7275085449219, 772.7506713867188], "28": [120.92308044433594, 756], "29": [396.0925598144531, 705.1928100585938], "30": [631.3846435546875, 767.076904296875], "31": [323.9074401855469, 432.1850891113281], "32": [146.76922607421875, 742.1538696289062], "33": [397.8461608886719, 431.0769348144531], "34": [313.7275085449219, 732.956298828125], "35": [408.1233825683594, 349.8200378417969], "36": [632.3076782226562, 681.2307739257812], "37": [579.6923217773438, 708], "38": [313.7275085449219, 905.0899658203125], "39": [407.19793701171875, 906.0154418945312], "40": [532.6153564453125, 639.6923217773438], "41": [407.19793701171875, 936.5552978515625], "42": [328.5346984863281, 796.8123168945312], "43": [360, 283.1876525878906], "44": [146.22108459472656, 711.6709594726562], "45": [407.19793701171875, 406.2724914550781], "46": [396.0925598144531, 586.7352294921875], "47": [320.30767822265625, 214.15383911132812], "48": [94.15384674072266, 684], "49": [576.923095703125, 738.4615478515625], "50": [173.0591278076172, 727.4036254882812], "51": [497.5384521484375, 624.923095703125], "52": [392.3907470703125, 849.56298828125], "53": [328.5346984863281, 849.56298828125], "54": [313.7275085449219, 873.6246948242188], "55": [603.6923217773438, 752.3076782226562], "56": [385.91259765625, 337.7892150878906], "57": [119.07691955566406, 697.8461303710938], "58": [313.7275085449219, 937.480712890625], "59": [407.19793701171875, 771.8251953125], "60": [360, 849.56298828125], "61": [360, 167.07691955566406], "62": [334.08740234375, 338.71466064453125], "63": [399.69232177734375, 167.07691955566406], "64": [320.30767822265625, 167.07691955566406]}, "gateRadius": {"1": 12, "2": 12, "3": 12, "4": 12, "5": 12, "6": 12, "7": 12, "8": 12, "9": 12, "10": 12, "11": 12, "12": 12, "13": 12, "14": 12, "15": 12, "16": 12, "17": 12, "18": 12, "19": 12, "20": 12, "21": 12, "22": 12, "23": 12, "24": 12, "25": 12, "26": 12, "27": 12, "28": 12, "29": 12, "30": 12, "31": 12, "32": 12, "33": 12, "34": 12, "35": 12, "36": 12, "37": 12, "38": 12, "39": 12, "40": 12, "41": 12, "42": 12, "43": 12, "44": 12, "45": 12, "46": 12, "47": 12, "48": 12, "49": 12, "50": 12, "51": 12, "52": 12, "53": 12, "54": 12, "55": 12, "56": 12, "57": 12, "58": 12, "59": 12, "60": 12, "61": 12, "62": 12, "63": 12, "64": 12}, "channels": {"1-8": {"a": "1", "b": "8", "style": "orth", "w": 8, "ctrl": [380, 482.5]}, "14-2": {"a": "2", "b": "14", "style": "orth", "w": 8, "ctrl": [390, 710]}, "3-60": {"a": "3", "b": "60", "style": "orth", "w": 8, "ctrl": [210, 525]}, "4-63": {"a": "4", "b": "63", "style": "orth", "w": 8, "ctrl": [400, 205]}, "15-5": {"a": "5", "b": "15", "style": "orth", "w": 8, "ctrl": [370, 657.5]}, "59-6": {"a": "6", "b": "59", "style": "curve", "w": 8, "ctrl": [489.23077392578125, 744.923095703125]}, "31-7": {"a": "7", "b": "31", "style": "orth", "w": 8, "ctrl": [360, 505]}, "52-9": {"a": "9", "b": "52", "style": "orth", "w": 8, "ctrl": [340, 862.5]}, "10-20": {"a": "10", "b": "20", "style": "curve", "w": 8, "ctrl": [182.76922607421875, 524.3076782226562]}, "10-34": {"a": "10", "b": "34", "style": "curve", "w": 8, "ctrl": [77.53845977783203, 531.6923217773438]}, "10-57": {"a": "10", "b": "57", "style": "curve", "w": 8, "ctrl": [187.38461303710938, 507.69232177734375]}, "11-56": {"a": "11", "b": "56", "style": "orth", "w": 8, "ctrl": [390, 332.5]}, "12-22": {"a": "12", "b": "22", "style": "curve", "w": 8, "ctrl": [535.5269775390625, 531.8155517578125]}, "13-33": {"a": "13", "b": "33", "style": "orth", "w": 8, "ctrl": [340, 470]}, "16-48": {"a": "16", "b": "48", "style": "curve", "w": 8, "ctrl": [175.38461303710938, 496.6153869628906]}, "17-62": {"a": "17", "b": "62", "style": "orth", "w": 8, "ctrl": [315, 320]}, "18-58": {"a": "18", "b": "58", "style": "curve", "w": 8, "ctrl": [183.6923065185547, 887.076904296875]}, "19-49": {"a": "19", "b": "49", "style": "curve", "w": 8, "ctrl": [518.8688354492188, 827.0340576171875]}, "20-34": {"a": "20", "b": "34", "style": "curve", "w": 8, "ctrl": [136.0411376953125, 558.9717407226562]}, "20-57": {"a": "20", "b": "57", "style": "curve", "w": 8, "ctrl": [175.38461303710938, 546.4615478515625]}, "21-45": {"a": "21", "b": "45", "style": "curve", "w": 8, "ctrl": [487.403564453125, 528.11376953125]}, "23-43": {"a": "23", "b": "43", "style": "orth", "w": 8, "ctrl": [345, 332.5]}, "24-61": {"a": "24", "b": "61", "style": "orth", "w": 8, "ctrl": [360, 220]}, "25-51": {"a": "25", "b": "51", "style": "curve", "w": 9, "ctrl": [462.4615478515625, 576.923095703125]}, "26-44": {"a": "26", "b": "44", "style": "curve", "w": 8, "ctrl": [259.3846130371094, 654.4615478515625]}, "27-50": {"a": "27", "b": "50", "style": "curve", "w": 8, "ctrl": [270, 757.5]}, "28-38": {"a": "28", "b": "38", "style": "curve", "w": 8, "ctrl": [198.46153259277344, 854.7692260742188]}, "29-46": {"a": "29", "b": "46", "style": "orth", "w": 8, "ctrl": [380, 690]}, "32-54": {"a": "32", "b": "54", "style": "curve", "w": 8, "ctrl": [215.07691955566406, 834.4615478515625]}, "34-57": {"a": "34", "b": "57", "style": "curve", "w": 8, "ctrl": [156.92308044433594, 568.6153564453125]}, "35-36": {"a": "35", "b": "36", "style": "curve", "w": 8, "ctrl": [536.452392578125, 480.9158020019531]}, "37-40": {"a": "37", "b": "40", "style": "curve", "w": 8, "ctrl": [563.2904663085938, 667.856689453125]}, "39-55": {"a": "39", "b": "55", "style": "curve", "w": 8, "ctrl": [535.5269775390625, 850.1702880859375]}, "30-41": {"a": "41", "b": "30", "style": "curve", "w": 8, "ctrl": [561.2307739257812, 870.4615478515625]}, "42-53": {"a": "42", "b": "53", "style": "orth", "w": 8, "ctrl": [380, 887.5]}, "47-64": {"a": "47", "b": "64", "style": "orth", "w": 8, "ctrl": [320, 205]}}};
+
+// ---------- helpers ----------
+let altDown=false;
+window.addEventListener('keydown',e=>{ if(e.key==='Alt') altDown=true; });
+window.addEventListener('keyup',e=>{ if(e.key==='Alt') altDown=false; });
+
+function el(name, attrs={}, parent=null){
+  const n=document.createElementNS(NS,name);
+  for(const [k,v] of Object.entries(attrs)) n.setAttribute(k,v);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+function sSnap(v){ return (state.snap && !altDown) ? Math.round(v/ state.snapStep) * state.snapStep : v; }
+function magnetX(x){
+  if(!state.showGuide || state.magnet<=0 || altDown) return x;
+  return Math.abs(x - state.guideX) <= state.magnet ? state.guideX : x;
+}
+function key(a,b){ return [a,b].sort().join("-"); }
+function svgPoint(evt){
+  const pt=svg.createSVGPoint();
+  pt.x=evt.clientX; pt.y=evt.clientY;
+  const ctm=svg.getScreenCTM().inverse();
+  return pt.matrixTransform(ctm);
+}
+
+// ---------- model ----------
+const defaultCenters=[
+  {id:"Head", type:"tri", x:330, y:100, w:60, h:60, rot:0, dir:"up"},
+  {id:"Ajna", type:"tri", x:300, y:200, w:120, h:70, rot:0, dir:"down"},
+  {id:"Throat", type:"rect", x:300, y:330, w:120, h:80, rot:0, rx:18},
+  {id:"G", type:"diamond", x:300, y:480, w:120, h:120, rot:45},
+  {id:"Ego", type:"tri", x:500, y:520, w:80, h:70, rot:0, dir:"right"},
+  {id:"Spleen", type:"tri", x:170, y:610, w:90, h:90, rot:0, dir:"left"},
+  {id:"Solar", type:"tri", x:510, y:660, w:90, h:90, rot:0, dir:"right"},
+  {id:"Sacral", type:"rect", x:270, y:720, w:180, h:90, rot:0, rx:18},
+  {id:"Root", type:"rect", x:240, y:900, w:240, h:110, rot:0, rx:18}
+];
+
+const defaultGates = (()=>{
+  const g={};
+  g["64"]=[320,160]; g["61"]=[360,160]; g["63"]=[400,160];
+  g["47"]=[320,250]; g["24"]=[360,280]; g["4"]=[400,250]; g["17"]=[330,255]; g["11"]=[390,255]; g["43"]=[360,255];
+  g["62"]=[300,385]; g["23"]=[330,410]; g["56"]=[390,410]; g["20"]=[420,385]; g["33"]=[360,360]; g["31"]=[360,450]; g["8"]=[400,445]; g["16"]=[320,445];
+  g["1"]=[360,520]; g["7"]=[360,560]; g["13"]=[320,580]; g["25"]=[360,600]; g["46"]=[400,580]; g["2"]=[360,630]; g["10"]=[340,540]; g["15"]=[380,540];
+  g["21"]=[540,555]; g["26"]=[550,585]; g["51"]=[510,585]; g["40"]=[560,545];
+  g["48"]=[220,645]; g["57"]=[230,675]; g["44"]=[250,690]; g["50"]=[220,705]; g["32"]=[250,725]; g["28"]=[210,715]; g["18"]=[260,660];
+  g["6"]=[540,705]; g["37"]=[580,665]; g["22"]=[560,685]; g["30"]=[560,725]; g["36"]=[585,745]; g["49"]=[600,705]; g["55"]=[530,745];
+  g["34"]=[400,760]; g["5"]=[360,775]; g["9"]=[320,760]; g["14"]=[420,790]; g["29"]=[360,800]; g["59"]=[400,810]; g["27"]=[320,810]; g["42"]=[380,840];
+  g["54"]=[400,910]; g["38"]=[420,935]; g["53"]=[380,935]; g["52"]=[360,965]; g["58"]=[340,935]; g["60"]=[300,910]; g["19"]=[320,935]; g["39"]=[440,965]; g["41"]=[340,990]; g["35"]=[460,820]; g["45"]=[520,500]; g["12"]=[560,640];
+  return g;
+})();
+
+let state = {
+  mode:"gates",
+  snap:true,
+  snapStep: 2,
+  showGrid:true,
+  showGuide:true,
+  guideX: 360,
+  magnet: 6,
+  centers: Array.isArray(USER_MAP.centers) && USER_MAP.centers.length ? USER_MAP.centers : JSON.parse(JSON.stringify(defaultCenters)),
+  gates: USER_MAP.gates && Object.keys(USER_MAP.gates).length ? USER_MAP.gates : JSON.parse(JSON.stringify(defaultGates)),
+  gateRadius: USER_MAP.gateRadius || {},
+  channels: USER_MAP.channels || {},
+  selectedCenter: "G",
+  selectedGate: "1",
+  selectedChannel: null
+};
+
+const canonical = [
+  "1-8","2-14","3-60","4-63","5-15","6-59","7-31","9-52","10-20","10-34","10-57",
+  "11-56","12-22","13-33","16-48","17-62","18-58","19-49","20-34","20-57","21-45",
+  "23-43","24-61","25-51","26-44","27-50","28-38","29-46","32-54","34-57","35-36",
+  "37-40","39-55","41-30","42-53","47-64"
+];
+if(Object.keys(state.channels).length===0){
+  const uniq = new Set();
+  for(const s of canonical){
+    const [a,b]=s.split("-"); const id=key(a,b); if(uniq.has(id)) continue; uniq.add(id);
+    const A = state.gates[a]||[360,360], B=state.gates[b]||[360,360];
+    state.channels[id] = {a,b,style:"orth",w:8,ctrl:[(A[0]+B[0])/2,(A[1]+B[1])/2]};
+  }
+}
+for(const id of Object.keys(state.gates)){
+  if(state.gateRadius[id]==null) state.gateRadius[id]=12;
+}
+
+// ---------- grid & guide ----------
+function drawGrid(){
+  gGrid.innerHTML="";
+  if(!state.showGrid) return;
+  for(let x=40;x<=680;x+=40) el("line",{x1:x,y1:80,x2:x,y2:1000},gGrid);
+  for(let y=100;y<=1000;y+=40) el("line",{x1:120,y1:y,x2:600,y2:y},gGrid);
+}
+function drawGuide(){
+  gGuide.innerHTML="";
+  if(!state.showGuide) return;
+  const x = state.guideX;
+  el("line",{x1:x,y1:80,x2:x,y2:1000,class:"guideLine"}, gGuide);
+  el("path",{d:`M ${x-6},90 L ${x},80 L ${x+6},90`, fill:"var(--guide)"}, gGuide);
+  el("path",{d:`M ${x-6},990 L ${x},1000 L ${x+6},990`, fill:"var(--guide)"}, gGuide);
+}
+
+// ---------- centers ----------
+function centerPath(c){
+  const {type,x,y,w,h,rot=0,rx=18,dir="up"} = c;
+  if(type==="rect") return el("rect",{x,y,width:w,height:h,rx,ry:rx,transform:`rotate(${rot} ${x+w/2} ${y+h/2})`});
+  if(type==="diamond"){
+    const cx=x+w/2, cy=y+h/2;
+    return el("rect",{x,y,width:w,height:h,rx:20,ry:20,transform:`rotate(${rot} ${cx} ${cy})`});
+  }
+  if(type==="tri"){
+    let pts;
+    if(dir==="up") pts = `${x+w/2},${y} ${x+w},${y+h} ${x},${y+h}`;
+    else if(dir==="down") pts = `${x},${y} ${x+w},${y} ${x+w/2},${y+h}`;
+    else if(dir==="left") pts = `${x+w},${y} ${x+w},${y+h} ${x},${y+h/2}`;
+    else pts = `${x},${y} ${x+w},${y+h/2} ${x},${y+h}`;
+    return el("polygon",{points:pts,transform:`rotate(${rot} ${x+w/2} ${y+h/2})`});
+  }
+  return el("rect",{x,y,width:w,height:h,rx:10,ry:10});
+}
+function drawCenters(){
+  gCenters.innerHTML="";
+  for(const c of state.centers){
+    const node = centerPath(c);
+    node.classList.add("center-shape");
+    node.dataset.id = c.id;
+    if(state.mode==="centers" && state.selectedCenter===c.id) node.classList.add("selected");
+    gCenters.appendChild(node);
+  }
+}
+function drawCenterHandles(){
+  gHandles.innerHTML="";
+  if(state.mode!=="centers") return;
+  const c = state.centers.find(x=>x.id===state.selectedCenter);
+  if(!c) return;
+  const {x,y,w,h} = c;
+  const corners = [[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
+  corners.forEach(([cx,cy],i)=>{
+    const hdl = el("rect",{x:cx-6,y:cy-6,width:12,height:12,rx:3,ry:3,class:"handle"} ,gHandles);
+    hdl.dataset.handleIndex = String(i);
+  });
+}
+
+// ---------- gates ----------
+function drawGates(){
+  gGates.innerHTML="";
+  const ids = Object.keys(state.gates).sort((a,b)=>+a-+b);
+  for(const id of ids){
+    const [x,y] = state.gates[id];
+    const r = state.gateRadius[id]||12;
+    const g = el("g",{class:"gate","data-id":id}, gGates);
+    if(state.mode==="gates" && state.selectedGate===id) g.classList.add("selected");
+    el("circle",{cx:x,cy:y,r,fill:"#d7dddd",stroke:"#111","stroke-width":1.4}, g);
+    el("text",{x, y:y+4, "text-anchor":"middle","font-size":"10","font-weight":"600", fill:"#111"}, g).textContent = id;
+  }
+}
+
+// ---------- channels ----------
+const straightKeys = new Set(["61-24","24-33","31-7","7-25","25-2","5-15","34-20","9-52"]);
+function drawChannels(){
+  gChannels.innerHTML="";
+  for(const [id, ch] of Object.entries(state.channels)){
+    const A = state.gates[ch.a], B = state.gates[ch.b];
+    if(!A || !B) continue;
+    let d;
+    if(ch.style==="orth" || straightKeys.has(id)){
+      const midY = (A[1]+B[1])/2;
+      d = `M ${A[0]},${A[1]} L ${A[0]},${midY} L ${B[0]},${midY} L ${B[0]},${B[1]}`;
+    }else{
+      const [cx,cy] = ch.ctrl || [(A[0]+B[0])/2,(A[1]+B[1])/2];
+      d = `M ${A[0]},${A[1]} Q ${cx},${cy} ${B[0]},${B[1]}`;
+    }
+    const path = el("path",{d,fill:"none", stroke:"#7f8f92","stroke-width":ch.w||8,"stroke-linecap":"round", opacity:0.95}, gChannels);
+    path.dataset.id = id;
+    if(state.mode==="channels" && state.selectedChannel===id) path.classList.add("selected");
+  }
+}
+
+// ---------- UI refs ----------
+const bgfile = document.getElementById('bgfile');
+document.getElementById('showGrid').onchange = (e)=>{ state.showGrid=e.target.checked; drawGrid(); };
+document.getElementById('snap').onchange = (e)=>{ state.snap=e.target.checked; };
+document.getElementById('snapStep').onchange = (e)=>{ 
+  const v = Math.max(1, Math.min(20, parseInt(e.target.value||'2',10))); 
+  state.snapStep = v; 
+  e.target.value = v;
+};
+
+const showGuideEl = document.getElementById('showGuide');
+const guideXEl = document.getElementById('guideX');
+const magnetEl = document.getElementById('magnet');
+showGuideEl.onchange = (e)=>{ state.showGuide=e.target.checked; drawGuide(); };
+guideXEl.onchange = (e)=>{ state.guideX = Math.max(0,Math.min(720,parseInt(e.target.value||'360',10))); drawGuide(); };
+magnetEl.onchange = (e)=>{ state.magnet = Math.max(0,Math.min(40,parseInt(e.target.value||'6',10))); };
+
+document.getElementById('centerOnGuide').onclick = ()=>{
+  if(state.mode==="centers"){
+    const c = state.centers.find(x=>x.id===state.selectedCenter); if(!c) return;
+    c.x = Math.round(state.guideX - c.w/2);
+    drawCenters(); drawCenterHandles();
+  }else if(state.mode==="gates"){
+    const id = state.selectedGate; if(!id) return;
+    const [x,y] = state.gates[id];
+    state.gates[id] = [state.guideX, y];
+    drawChannels(); drawGates();
+  }else if(state.mode==="channels" && state.selectedChannel){
+    const ch = state.channels[state.selectedChannel];
+    const A = state.gates[ch.a], B = state.gates[ch.b];
+    ch.style="curve";
+    ch.ctrl = [state.guideX, (A[1]+B[1])/2 ];
+    drawChannels();
+  }
+};
+
+document.getElementById('reset').onclick = ()=>{
+  // Reset back to USER_MAP (your uploaded mapping)
+  state.centers = Array.isArray(USER_MAP.centers) && USER_MAP.centers.length ? structuredClone(USER_MAP.centers) : state.centers;
+  state.gates   = USER_MAP.gates && Object.keys(USER_MAP.gates).length ? structuredClone(USER_MAP.gates) : state.gates;
+  state.gateRadius = USER_MAP.gateRadius ? structuredClone(USER_MAP.gateRadius) : state.gateRadius;
+  state.channels = USER_MAP.channels ? structuredClone(USER_MAP.channels) : state.channels;
+  renderAll();
+};
+document.getElementById('modeCenters').onclick=()=>{ state.mode="centers"; renderAll(); };
+document.getElementById('modeGates').onclick=()=>{ state.mode="gates"; renderAll(); };
+document.getElementById('modeChannels').onclick=()=>{ state.mode="channels"; renderAll(); };
+
+// Panels
+const centerSelect = document.getElementById('centerSelect');
+const cW=document.getElementById('cW'), cH=document.getElementById('cH'), cR=document.getElementById('cR');
+function refreshCenterPanel(){
+  centerSelect.innerHTML="";
+  for(const c of state.centers){
+    const opt=document.createElement('option'); opt.value=c.id; opt.textContent=c.id;
+    if(c.id===state.selectedCenter) opt.selected=true;
+    centerSelect.appendChild(opt);
+  }
+  const c = state.centers.find(x=>x.id===state.selectedCenter) || state.centers[0];
+  state.selectedCenter = c.id;
+  cW.value = Math.round(c.w); cH.value=Math.round(c.h); cR.value=Math.round(c.rot||0);
+}
+centerSelect.onchange=(e)=>{ state.selectedCenter=e.target.value; renderAll(); };
+cW.onchange=()=>{ const c=state.centers.find(x=>x.id===state.selectedCenter); c.w=+cW.value; renderAll(); };
+cH.onchange=()=>{ const c=state.centers.find(x=>x.id===state.selectedCenter); c.h=+cH.value; renderAll(); };
+cR.onchange=()=>{ const c=state.centers.find(x=>x.id===state.selectedCenter); c.rot=+cR.value; renderAll(); };
+
+const gateSelect=document.getElementById('gateSelect');
+const gR=document.getElementById('gR'); const gRVal=document.getElementById('gRVal');
+function refreshGatePanel(){
+  gateSelect.innerHTML="";
+  const ids = Object.keys(state.gates).sort((a,b)=>+a-+b);
+  for(const id of ids){
+    const opt=document.createElement('option'); opt.value=id; opt.textContent=id;
+    if(id===state.selectedGate) opt.selected=true;
+    gateSelect.appendChild(opt);
+  }
+  const id = state.selectedGate || ids[0];
+  state.selectedGate=id;
+  gR.value = state.gateRadius[id]||12; gRVal.textContent=gR.value;
+}
+gateSelect.onchange=(e)=>{ state.selectedGate=e.target.value; renderAll(); };
+gR.oninput=()=>{ const id=state.selectedGate; state.gateRadius[id]=+gR.value; gRVal.textContent=gR.value; drawGates(); };
+
+const chSelect=document.getElementById('chSelect');
+const chStyle=document.getElementById('chStyle');
+const chW=document.getElementById('chW'); const chWVal=document.getElementById('chWVal');
+function refreshChannelPanel(){
+  chSelect.innerHTML="";
+  const ids = Object.keys(state.channels).sort();
+  for(const id of ids){
+    const opt=document.createElement('option'); opt.value=id; opt.textContent=id;
+    if(id===state.selectedChannel) opt.selected=true;
+    chSelect.appendChild(opt);
+  }
+  const id = state.selectedChannel || Object.keys(state.channels)[0];
+  state.selectedChannel = id;
+  const ch=state.channels[id];
+  chStyle.value=ch.style;
+  chW.value=ch.w; chWVal.textContent=ch.w;
+}
+chSelect.onchange=(e)=>{ state.selectedChannel=e.target.value; renderAll(); };
+chStyle.onchange=()=>{ const id=state.selectedChannel; state.channels[id].style=chStyle.value; renderAll(); };
+chW.oninput=()=>{ const id=state.selectedChannel; state.channels[id].w=+chW.value; chWVal.textContent=chW.value; drawChannels(); };
+
+// Background image
+document.getElementById('bgfile').onchange = (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  bg.setAttribute("href", URL.createObjectURL(f));
+};
+
+// Save/Load JSON
+document.getElementById('save').onclick=()=>{
+  const blob = new Blob([JSON.stringify({
+    centers: state.centers,
+    gates: state.gates,
+    gateRadius: state.gateRadius,
+    channels: state.channels
+  }, null, 2)], {type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='bodygraph-layout.json';
+  a.click();
+};
+document.getElementById('load').onchange=(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload = ()=>{
+    try{
+      const data = JSON.parse(r.result.toString());
+      if(data.centers) state.centers=data.centers;
+      if(data.gates) state.gates=data.gates;
+      if(data.gateRadius) state.gateRadius=data.gateRadius;
+      if(data.channels) state.channels=data.channels;
+      renderAll();
+    }catch(err){ alert("Invalid JSON"); }
+  };
+  r.readAsText(f);
+};
+
+// ---------- interactions with magnet ----------
+let dragging = null;
+
+svg.addEventListener('pointerdown', (e)=>{
+  const pt = svgPoint(e);
+
+  if(state.mode==="centers"){
+    if(e.target.classList.contains('handle')){
+      const idx = +e.target.dataset.handleIndex;
+      dragging = {type:"resize-center", idx, start:[pt.x,pt.y], orig: structuredClone(state.centers.find(x=>x.id===state.selectedCenter)) };
+      svg.setPointerCapture(e.pointerId);
+      return;
+    }
+    const node = e.target.closest('.center-shape');
+    if(node){
+      state.selectedCenter = node.dataset.id;
+      dragging = {type:"move-center", start:[pt.x,pt.y]};
+      svg.setPointerCapture(e.pointerId);
+      renderAll();
+      return;
+    }
+  }
+
+  if(state.mode==="gates"){
+    const node = e.target.closest('.gate');
+    if(node){
+      state.selectedGate = node.dataset.id;
+      dragging = {type:"move-gate", id: state.selectedGate};
+      node.classList.add('dragging');
+      svg.setPointerCapture(e.pointerId);
+      renderAll();
+      return;
+    }
+  }
+
+  if(state.mode==="channels"){
+    const path = e.target.closest('path');
+    if(path){
+      const id = path.dataset.id;
+      state.selectedChannel = id;
+      state.channels[id].style = "curve";
+      dragging = {type:"bend-channel", id};
+      svg.setPointerCapture(e.pointerId);
+      renderAll();
+      return;
+    }
+    if(e.target.classList.contains('ctrl')){
+      const id = e.target.dataset.ctrlFor;
+      state.selectedChannel = id;
+      dragging = {type:"move-ctrl", id};
+      svg.setPointerCapture(e.pointerId);
+      renderAll();
+      return;
+    }
+  }
+});
+
+svg.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+  const pt = svgPoint(e);
+
+  if(dragging.type==="move-center"){
+    const c = state.centers.find(x=>x.id===state.selectedCenter);
+    const dx = pt.x - dragging.start[0];
+    const dy = pt.y - dragging.start[1];
+    let nx = sSnap(c.x + dx);
+    let ny = sSnap(c.y + dy);
+    const mid = nx + c.w/2;
+    if(Math.abs(mid - state.guideX) <= state.magnet && state.showGuide && !altDown){
+      nx = Math.round(state.guideX - c.w/2);
+    }
+    c.x = nx; c.y = ny;
+    dragging.start=[pt.x,pt.y];
+    drawCenters(); drawCenterHandles();
+  }
+  else if(dragging.type==="resize-center"){
+    const o = dragging.orig;
+    let x=o.x, y=o.y, w=o.w, h=o.h;
+    const dx = sSnap(pt.x - dragging.start[0]);
+    const dy = sSnap(pt.y - dragging.start[1]);
+    switch(dragging.idx){
+      case 0: x = o.x + dx; y = o.y + dy; w = o.w - dx; h = o.h - dy; break;
+      case 1: y = o.y + dy; w = o.w + dx; h = o.h - dy; break;
+      case 2: w = o.w + dx; h = o.h + dy; break;
+      case 3: x = o.x + dx; w = o.w - dx; h = o.h + dy; break;
+    }
+    w = Math.max(20,w); h=Math.max(20,h);
+    const c = state.centers.find(x=>x.id===state.selectedCenter);
+    const mid = x + w/2;
+    if(Math.abs(mid - state.guideX) <= state.magnet && state.showGuide && !altDown){
+      x = Math.round(state.guideX - w/2);
+    }
+    c.x=x; c.y=y; c.w=w; c.h=h;
+    drawCenters(); drawCenterHandles();
+  }
+  else if(dragging.type==="move-gate"){
+    const id = dragging.id;
+    let nx = sSnap(pt.x);
+    let ny = sSnap(pt.y);
+    nx = magnetX(nx);
+    state.gates[id] = [ nx, ny ];
+    drawChannels(); drawGates();
+  }
+  else if(dragging.type==="bend-channel" || dragging.type==="move-ctrl"){
+    const id = dragging.id;
+    let nx = sSnap(pt.x);
+    let ny = sSnap(pt.y);
+    nx = magnetX(nx);
+    state.channels[id].style = "curve";
+    state.channels[id].ctrl = [ nx, ny ];
+    drawChannels();
+  }
+});
+
+svg.addEventListener('pointerup', (e)=>{
+  if(dragging && dragging.type==="move-gate"){
+    const node = document.querySelector('.gate.dragging');
+    if(node) node.classList.remove('dragging');
+  }
+  dragging=null;
+});
+
+// Keyboard nudge (1px)
+window.addEventListener('keydown', (e)=>{
+  const step = 1;
+  if(state.mode==="centers"){
+    const c = state.centers.find(x=>x.id===state.selectedCenter);
+    if(!c) return;
+    if(e.key==='ArrowLeft'){ c.x -= step; }
+    if(e.key==='ArrowRight'){ c.x += step; }
+    if(e.key==='ArrowUp'){ c.y -= step; }
+    if(e.key==='ArrowDown'){ c.y += step; }
+    drawCenters(); drawCenterHandles();
+  }else if(state.mode==="gates"){
+    const id = state.selectedGate;
+    if(!id) return;
+    const [x,y] = state.gates[id];
+    if(e.key==='ArrowLeft'){ state.gates[id]=[x-1,y]; }
+    if(e.key==='ArrowRight'){ state.gates[id]=[x+1,y]; }
+    if(e.key==='ArrowUp'){ state.gates[id]=[x,y-1]; }
+    if(e.key==='ArrowDown'){ state.gates[id]=[x,y+1]; }
+    drawChannels(); drawGates();
+  }
+});
+
+// ---------- panels init & render ----------
+function initPanels(){
+  refreshCenterPanel();
+  refreshGatePanel();
+  refreshChannelPanel();
+  document.getElementById('showGuide').checked = state.showGuide;
+  document.getElementById('guideX').value = state.guideX;
+  document.getElementById('magnet').value = state.magnet;
+}
+function renderAll(){
+  drawGrid();
+  drawGuide();
+  drawCenters();
+  drawCenterHandles();
+  drawChannels();
+  drawGates();
+  initPanels();
+}
+renderAll();
+</script>
+
+<!-- v4.8 patch: movable A/B joints & integration rebuild -->
+<style>
+  .abHandle{fill:#00d3ff; stroke:#053b45; stroke-width:1.5; cursor:pointer}
+  .abLabel{font-size:11px; fill:#8feaff; paint-order:stroke; stroke:#0b1a1f; stroke-width:2px}
+  .inte{ pointer-events:none; }
+</style>
+<script>
+(function(){
+  const NS="http://www.w3.org/2000/svg";
+  const svg = document.getElementById('svg');
+  const gChannels = document.getElementById('channels');
+  let gAB = document.getElementById('ablayer'); if(!gAB){ gAB = document.createElementNS(NS,'g'); gAB.setAttribute('id','ablayer'); svg.appendChild(gAB); }
+  function hasState(){ try{ return (typeof state!=='undefined') && state && state.channels && state.gates; }catch(e){ return false; } }
+  const KEY=(a,b)=>[a,b].sort((x,y)=>+x-+y).join('-');
+
+  // Quadratic helpers for 20–57
+  function quad(A,C,B,t){ const u=1-t; return [u*u*A[0]+2*u*t*C[0]+t*t*B[0], u*u*A[1]+2*u*t*C[1]+t*t*B[1]]; }
+  function sample(A,C,B, t1, t2, N=24){
+    const pts=[]; const steps=Math.max(2, Math.round(N*Math.abs(t2-t1)));
+    for(let i=0;i<=steps;i++){ const t=t1 + (i/steps)*(t2-t1); pts.push(quad(A,C,B,t)); }
+    return pts;
+  }
+  function pathFromPts(pts){
+    if(!pts || pts.length<2) return "";
+    let d = `M ${pts[0][0]},${pts[0][1]}`;
+    if(pts.length===2){ d += ` L ${pts[1][0]},${pts[1][1]}`; return d; }
+    let p = pts.map(q=>[q[0],q[1]]);
+    p = [p[0], ...p, p[p.length-1]];
+    for(let i=1;i<p.length-2;i++){
+      const p0=p[i-1], p1=p[i], p2=p[i+1], p3=p[i+2];
+      const c1x = p1[0] + (p2[0]-p0[0])/6, c1y = p1[1] + (p2[1]-p0[1])/6;
+      const c2x = p2[0] - (p3[0]-p1[0])/6, c2y = p2[1] - (p3[1]-p1[1])/6;
+      d += ` C ${c1x},${c1y} ${c2x},${c2y} ${p2[0]},${p2[1]}`;
+    }
+    return d;
+  }
+  function nearestT(A,C,B, x,y){
+    let bestT=0, bestD=1e9;
+    for(let i=0;i<=260;i++){
+      const t=i/260; const p=quad(A,C,B,t); const d=(p[0]-x)*(p[0]-x)+(p[1]-y)*(p[1]-y);
+      if(d<bestD){ bestD=d; bestT=t; }
+    }
+    return bestT;
+  }
+
+  // Draggable A/B along 20–57
+  let tA = 2/3, tB = 1/3;
+  let draggingAB = null;
+
+  function el(name, attrs={}, parent=null){
+    const n=document.createElementNS(NS, name);
+    for(const k in attrs) n.setAttribute(k, attrs[k]);
+    if(parent) parent.appendChild(n);
+    return n;
+  }
+
+  function drawAB(){
+    gAB.innerHTML="";
+    if(!hasState()) return;
+    const id=KEY(20,57); const ch=state.channels[id]; if(!ch) return;
+    const P20 = state.gates[ch.a], P57 = state.gates[ch.b];
+    const C   = ch.ctrl || [(P20[0]+P57[0])/2,(P20[1]+P57[1])/2];
+    const A = quad(P20,C,P57,tA), B = quad(P20,C,P57,tB);
+    const ah = el('rect',{x:A[0]-6,y:A[1]-6,width:12,height:12,rx:3,ry:3,class:'abHandle','data-ab':'A'}, gAB);
+    const al = el('text',{x:A[0]+10,y:A[1]-10,class:'abLabel'}, gAB); al.textContent="A";
+    const bh = el('rect',{x:B[0]-6,y:B[1]-6,width:12,height:12,rx:3,ry:3,class:'abHandle','data-ab':'B'}, gAB);
+    const bl = el('text',{x:B[0]+10,y:B[1]-10,class:'abLabel'}, gAB); bl.textContent="B";
+  }
+
+  function hideOrig(id){
+    const orig = gChannels.querySelector(`path[data-id="${id}"]`);
+    if(orig) orig.style.display = 'none';
+  }
+  function drawSegChannel(id, ptsList){
+    hideOrig(id);
+    const ch = state.channels[id];
+    const w = (ch && ch.w) ? ch.w : 8;
+    // remove previous overlays for this id
+    gChannels.querySelectorAll(`path.inte[data-id="${id}"]`).forEach(n=>n.remove());
+    ptsList.forEach(pts=>{
+      const p = el('path', {class:'inte','data-id':id, fill:'none', stroke:'#7f8f92','stroke-width':String(w),'stroke-linecap':'round', opacity:'1'} , gChannels);
+      p.setAttribute('d', pathFromPts(pts));
+    });
+  }
+
+  function redrawIntegration(){
+    if(!hasState()) return;
+    const idSpine = KEY(20,57);
+    const spine = state.channels[idSpine]; if(!spine) return;
+    const P20 = state.gates[spine.a], P57 = state.gates[spine.b];
+    const C   = spine.ctrl || [(P20[0]+P57[0])/2,(P20[1]+P57[1])/2];
+    const A = quad(P20,C,P57,tA), B = quad(P20,C,P57,tB);
+
+    // 10–20: spine 20→B, straight B→10
+    (function(){
+      const id = KEY(10,20); const ch = state.channels[id]; if(!ch) return;
+      const P10 = state.gates['10'];
+      const seg1 = sample(P20,C,P57, 0.0, tB, 28);
+      const seg2 = [B, P10];
+      drawSegChannel(id, [seg1, seg2]);
+    })();
+
+    // 10–34: straight 10→B, (skip B→A), straight A→34
+    (function(){
+      const id = KEY(10,34); const ch = state.channels[id]; if(!ch) return;
+      const P10 = state.gates['10'], P34 = state.gates['34'];
+      const seg1 = [P10, B];
+      const seg3 = [A, P34];
+      drawSegChannel(id, [seg1, seg3]);
+    })();
+
+    // 10–57: straight 10→B, spine A→57
+    (function(){
+      const id = KEY(10,57); const ch = state.channels[id]; if(!ch) return;
+      const P10 = state.gates['10'];
+      const seg1 = [P10, B];
+      const seg2 = sample(P20,C,P57, tA, 1.0, 32);
+      drawSegChannel(id, [seg1, seg2]);
+    })();
+
+    // 57–34: spine 57→A, straight A→34
+    (function(){
+      const id = KEY(57,34); const ch = state.channels[id]; if(!ch) return;
+      const P34 = state.gates['34'];
+      const seg1 = sample(P20,C,P57, 1.0, tA, 22);
+      const seg2 = [A, P34];
+      drawSegChannel(id, [seg1, seg2]);
+    })();
+
+    // 20–34: spine 20→B, straight A→34  (avoid duplicating B→A)
+    (function(){
+      const id = KEY(20,34); const ch = state.channels[id]; if(!ch) return;
+      const P34 = state.gates['34'];
+      const seg1 = sample(P20,C,P57, 0.0, tB, 28);
+      const seg2 = [A, P34];
+      drawSegChannel(id, [seg1, seg2]);
+    })();
+
+    drawAB();
+  }
+
+  // Hook drawChannels so our overlay recomputes after any change
+  if(typeof drawChannels === 'function' && !window.__abMovableHook){
+    window.__abMovableHook = true;
+    const old = drawChannels;
+    window.drawChannels = function(){ old(); try{ redrawIntegration(); }catch(e){ /* noop */ } };
+  }
+
+  // Dragging A/B along the 20–57 curve
+  svg.addEventListener('pointerdown', (e)=>{
+    const h = e.target.closest && e.target.closest('.abHandle');
+    if(!h) return;
+    draggingAB = h.getAttribute('data-ab'); svg.setPointerCapture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', (e)=>{
+    if(!draggingAB || !hasState()) return;
+    const id=KEY(20,57); const ch=state.channels[id]; if(!ch) return;
+    const P20 = state.gates[ch.a], P57 = state.gates[ch.b];
+    const C   = ch.ctrl || [(P20[0]+P57[0])/2,(P20[1]+P57[1])/2];
+    const P=svg.createSVGPoint(); P.x=e.clientX; P.y=e.clientY;
+    const pt=P.matrixTransform(svg.getScreenCTM().inverse());
+    let bestT=0, bestD=1e9;
+    for(let i=0;i<=260;i++){ const ti=i/260; const q=quad(P20,C,P57,ti); const d=(q[0]-pt.x)*(q[0]-pt.x)+(q[1]-pt.y)*(q[1]-pt.y); if(d<bestD){bestD=d; bestT=ti;} }
+    if(draggingAB==='A') tA=bestT; else tB=bestT;
+    redrawIntegration();
+  });
+  svg.addEventListener('pointerup', ()=>{ draggingAB=null; });
+
+  // Initial compute
+  redrawIntegration();
+})();
+</script>
+
+
+<script>
+const HD_ENDPOINT = '/api/bodygraph';
+const CENTER_NAME_MAP = {
+  "Head":"Head","Ajna":"Ajna","Throat":"Throat","G":"G","Ego":"Ego","Heart":"Ego",
+  "Spleen":"Spleen","Solar Plexus":"Solar","Solar Plexus Center":"Solar","Sacral":"Sacral","Root":"Root"
+};
+const CYAN = '#00d5ff';
+const GATE_TO_CENTER = {'64': 'Head', '61': 'Head', '63': 'Head', '47': 'Ajna', '24': 'Ajna', '4': 'Ajna', '62': 'Throat', '23': 'Throat', '56': 'Throat', '35': 'Throat', '12': 'Throat', '45': 'Throat', '33': 'Throat', '31': 'Throat', '8': 'Throat', '20': 'Throat', '16': 'Throat', '1': 'G', '2': 'G', '7': 'G', '13': 'G', '10': 'G', '15': 'G', '25': 'G', '46': 'G', '21': 'Ego', '51': 'Ego', '26': 'Ego', '40': 'Ego', '48': 'Spleen', '57': 'Spleen', '44': 'Spleen', '50': 'Spleen', '32': 'Spleen', '28': 'Spleen', '18': 'Spleen', '55': 'Solar', '36': 'Solar', '22': 'Solar', '37': 'Solar', '6': 'Solar', '49': 'Solar', '30': 'Solar', '34': 'Sacral', '5': 'Sacral', '14': 'Sacral', '29': 'Sacral', '59': 'Sacral', '27': 'Sacral', '9': 'Sacral', '3': 'Sacral', '42': 'Sacral', '58': 'Root', '38': 'Root', '54': 'Root', '53': 'Root', '60': 'Root', '52': 'Root', '19': 'Root', '39': 'Root', '41': 'Root'};
+
+function chKey(a,b){ a=String(a); b=String(b); return (+a<+b)?`${a}-${b}`:`${b}-${a}`; }
+function gateNum(v){ return String(v).split('.')[0]; }
+
+function parseApi(json){
+  const centersDefined = new Set((json.centers||[]).map(n => CENTER_NAME_MAP[n] || n));
+  const D = new Set(); const P = new Set();
+  const d = json.activations?.design || {}, p = json.activations?.personality || {};
+  Object.values(d).forEach(v=>{ if(v) D.add(gateNum(v)); });
+  Object.values(p).forEach(v=>{ if(v) P.add(gateNum(v)); });
+  const channels = new Set();
+  (json.channels_short||[]).forEach(s=>{ const [a,b]=String(s).split('-'); if(a&&b) channels.add(chKey(a,b)); });
+  return { centersDefined, D, P, channels };
+}
+
+// SVG center line
+function getSvgMidX(){
+  const svg = document.getElementById('svg');
+  if(!svg) return 0;
+  const vb = svg.getAttribute('viewBox');
+  if(vb){
+    const parts = vb.split(/\s+/).map(parseFloat);
+    if(parts.length===4){ const w = parts[2]; return parts[0] + w/2; }
+  }
+  const w = parseFloat(svg.getAttribute('width')||'0');
+  return w/2;
+}
+
+// ===== Gates (v8) =====
+function paintGates(D,P, centersDefined){
+  drawGates();
+  gGates.querySelectorAll('.gate').forEach(g=>{
+    const id = g.getAttribute('data-id');
+    const circles = g.querySelectorAll('circle');
+    const text   = g.querySelector('text');
+    if(!circles.length) return;
+
+    // center detection
+    const centerId = GATE_TO_CENTER[id] || null;
+    const centerDefined = centerId ? centersDefined.has(centerId) : false;
+    const gateDefined = D.has(id) || P.has(id);
+
+    // Clean up any old classes/attributes
+    circles.forEach(c=>{ c.classList.remove('gate-defined'); c.removeAttribute('style'); c.setAttribute('stroke', 'none'); });
+    if(text) text.classList.remove('gate-text-invert');
+
+    // Use the first circle as the visible one; hide extras
+    const circle = circles[0];
+    for(let i=1;i<circles.length;i++){ circles[i].setAttribute('opacity','0'); circles[i].setAttribute('stroke','none'); }
+
+    if(!centerDefined){
+      circle.setAttribute('opacity','1');
+      const gateDefined = D.has(id) || P.has(id);
+      if(gateDefined){
+        circle.setAttribute('fill','#111');
+        circle.setAttribute('stroke','#111');
+        if(text) text.classList.add('gate-text-invert');
+      }else{
+        circle.setAttribute('fill','none');
+        circle.setAttribute('style','fill:var(--undef-bg);stroke:none;');
+        if(text) text.setAttribute('fill','#111');
+      }
+      return;
+    }
+
+    // Defined center
+    circle.setAttribute('opacity','1');
+    if(gateDefined){
+      // Defined gate in defined center: black circle + white number
+      circle.classList.add('gate-defined');
+      circle.setAttribute('fill','#111');
+      circle.setAttribute('stroke','#111');
+      if(text) text.classList.add('gate-text-invert');
+    }else{
+      // Undefined gate in defined center: white (var(--undef-bg)) circle, NO outline
+      circle.setAttribute('fill','none');
+      circle.setAttribute('style','fill:var(--undef-bg);stroke:none;');
+      if(text) text.setAttribute('fill','#111');
+    }
+  });
+}
+
+// ===== Channels (same as v7 with mirrored stripes and unified background) =====
+function Q(A,C,B,t){ const u=1-t; return [u*u*A[0]+2*u*t*C[0]+t*t*B[0], u*u*A[1]+2*u*t*C[1]+t*t*B[1]]; }
+function sampleQuad(A,C,B, N=160){ const pts=[]; for(let i=0;i<=N;i++){ const t=i/N; pts.push(Q(A,C,B,t)); } return pts; }
+function sampleOrth(A,B){ const pts=[]; const midY=(A[1]+B[1])/2; const s=40;
+  for(let i=0;i<=s;i++) pts.push([A[0], A[1] + (i/s)*(midY-A[1])]);
+  for(let i=1;i<=s;i++) pts.push([A[0] + (i/s)*(B[0]-A[0]), midY]);
+  for(let i=1;i<=s;i++) pts.push([B[0], midY + (i/s)*(B[1]-midY)]);
+  return pts; }
+function pathD(pts){ if(!pts.length) return ""; let d=`M ${pts[0][0]},${pts[0][1]}`; for(let i=1;i<pts.length;i++) d+=` L ${pts[i][0]},${pts[i][1]}`; return d; }
+function pathAngle(pts){ if(pts.length<2) return 0; const a=pts[0], b=pts[pts.length-1]; return Math.atan2(b[1]-a[1], b[0]-a[0]) * 180/Math.PI; }
+function midPoint(pts){ let sx=0, sy=0; for(const p of pts){ sx+=p[0]; sy+=p[1]; } return [sx/pts.length, sy/pts.length]; }
+function halfSegments(pts){ const L=[0]; for(let i=1;i<pts.length;i++){ const dx=pts[i][0]-pts[i-1][0], dy=pts[i][1]-pts[i-1][1]; L[i]=L[i-1]+Math.hypot(dx,dy);}
+  const total=L[L.length-1], mid=total/2; let k=1; while(k<L.length && L[k]<mid) k++;
+  const t=(mid-L[k-1])/Math.max(1e-6, (L[k]-L[k-1])); const mx=pts[k-1][0]+t*(pts[k][0]-pts[k-1][0]); const my=pts[k-1][1]+t*(pts[k][1]-pts[k-1][1]);
+  const M=[mx,my]; const left=pts.slice(0,k); left.push(M); const right=[M, ...pts.slice(k)]; return [left,right]; }
+
+// Mirrored candy stripes
+let candyCounter = 0;
+function getSvgMidX(){
+  const svg = document.getElementById('svg');
+  if(!svg) return 0;
+  const vb = svg.getAttribute('viewBox');
+  if(vb){
+    const parts = vb.split(/\s+/).map(parseFloat);
+    if(parts.length===4){ const w = parts[2]; return parts[0] + w/2; }
+  }
+  const w = parseFloat(svg.getAttribute('width')||'0');
+  return w/2;
+}
+function patternForAngleMirrored(pts){
+  const deg = pathAngle(pts);
+  const m = midPoint(pts);
+  const midX = getSvgMidX();
+  let rot = deg + 45;
+  if(m[0] > midX) rot = 180 - rot;
+  candyCounter++;
+  const id = 'candy-' + candyCounter;
+  const defs = document.querySelector('defs');
+  const tpl = document.getElementById('candyTemplate');
+  if(!defs || !tpl) return 'url(#candyTemplate)';
+  const pat = tpl.cloneNode(true);
+  pat.setAttribute('id', id);
+  pat.setAttribute('patternTransform', `rotate(${rot})`);
+  defs.appendChild(pat);
+  return `url(#${id})`;
+}
+
+// Undefined channels baseline: white with black edge (stroke set in CSS via .base-fill)
+
+// === Seam mask at A/B for spine outline (no boundary line where legs meet) ===
+function ensureSeamMask(outlineWidth){
+  const mask = document.getElementById('maskSpineOutline');
+  if(!mask) return;
+  while(mask.firstChild) mask.removeChild(mask.firstChild);
+  const svg = document.getElementById('svg');
+  const vb = (svg.getAttribute('viewBox')||'0 0 720 1080').split(/\s+/).map(parseFloat);
+  const rect = document.createElementNS(NS,'rect');
+  rect.setAttribute('x', vb[0]); rect.setAttribute('y', vb[1]);
+  rect.setAttribute('width', vb[2]); rect.setAttribute('height', vb[3]);
+  rect.setAttribute('fill', 'white');
+  mask.appendChild(rect);
+  // clip interiors of centers (same as clipCenters)
+  gCenters.querySelectorAll('.center-shape').forEach(s=>{
+    const clone = s.cloneNode(true);
+    clone.removeAttribute('class');
+    clone.setAttribute('fill','black');
+    clone.setAttribute('stroke','none');
+    mask.appendChild(clone);
+  });
+  // black disks at A and B to hide the outline near the joins
+  const AB = (typeof getAB==='function') ? getAB() : null;
+  if(!AB) return;
+  const A = AB.A, B = AB.B;
+  const r = (outlineWidth||10)/2 + 1.5; // small safety pad
+  function disk(x,y){
+    const c = document.createElementNS(NS,'circle');
+    c.setAttribute('cx', x); c.setAttribute('cy', y);
+    c.setAttribute('r', r);
+    c.setAttribute('fill', 'black');
+    c.setAttribute('stroke', 'none');
+    return c;
+  }
+  mask.appendChild(disk(A[0], A[1]));
+  mask.appendChild(disk(B[0], B[1]));
+}
+
+function paintChannelBaseOutlined(){
+  ensureChannelMask();
+  gChannels.querySelectorAll('.base-outline, .base-fill').forEach(n => n.remove());
+  gChannels.querySelectorAll('path[data-id]').forEach(p=>{
+    const w = parseFloat(p.getAttribute('stroke-width')||'8');
+    const outline = p.cloneNode(true);
+    outline.classList.add('base-outline');
+    outline.setAttribute('stroke-width', String(w + 2));
+    if (p.getAttribute('data-id')==='20-57') { ensureSeamMask(w+2); outline.setAttribute('mask','url(#maskSpineOutline)'); } else { outline.setAttribute('mask','url(#clipCenters)'); }
+    gChannels.appendChild(outline);
+    const fill = p.cloneNode(true);
+    fill.classList.add('base-fill');
+    fill.setAttribute('stroke-width', String(w));
+    fill.setAttribute('mask','url(#clipCenters)');
+    gChannels.appendChild(fill);
+    p.setAttribute('stroke', 'rgba(0,0,0,0)');
+  });
+}
+
+
+// === v8r2 additions: generic half-channel painter + integration painter + drawStroke/style ===
+function drawStroke(pts, style, width){
+  if(!pts || pts.length<2) return;
+  const p=document.createElementNS(NS,'path');
+  p.setAttribute('class','halfstroke');
+  p.setAttribute('stroke-width', String(width||8));
+  p.setAttribute('d', pathD(pts));
+  if(style && style.type==='pattern') p.setAttribute('stroke', style.value);
+  else p.setAttribute('stroke', style || '#000');
+  p.setAttribute('fill','none');
+  p.setAttribute('stroke-linecap','round');
+  p.setAttribute('mask','url(#clipCenters)');
+  gChannels.appendChild(p);
+}
+function styleForGate(g,D,P, pts){
+  const d=D.has(g), p=P.has(g);
+  if(d && p) return { type:'pattern', value: patternForAngleMirrored(pts) };
+  if(d) return CYAN;
+  if(p) return '#111';
+  return null;
+}
+function paintChannelHalvesGeneric(id, ch, D, P){
+  const A=state.gates[ch.a], B=state.gates[ch.b];
+  if(!A || !B) return;
+  const pts = (ch.style==='curve')
+    ? sampleQuad(A, ch.ctrl || [(A[0]+B[0])/2,(A[1]+B[1])/2], B, 160)
+    : sampleOrth(A,B);
+  const parts = halfSegments(pts);
+  const w = ch.w || 8;
+  const segA = parts[0], segB = parts[1];
+  const sA = styleForGate(ch.a, D, P, segA);
+  if(sA) drawStroke(segA, sA, w);
+  const sB = styleForGate(ch.b, D, P, segB);
+  if(sB) drawStroke(segB, sB, w);
+}
+// --- Integration special handling (20/10/34/57) ---
+function getAB(){
+  const id=['20','57'].sort().join('-');
+  const ch=state.channels[id]; if(!ch) return null;
+  const P20=state.gates[ch.a], P57=state.gates[ch.b];
+  const C=ch.ctrl || [(P20[0]+P57[0])/2,(P20[1]+P57[1])/2];
+  const tA=2/3, tB=1/3;
+  const A=Q(P20,C,P57,tA), B=Q(P20,C,P57,tB);
+  return {A,B,P20,P57,C};
+}
+function spine(t1,t2,N=120){
+  const AB=getAB(); if(!AB) return [];
+  const {P20,P57,C} = AB;
+  const pts=[]; const steps=Math.max(2, Math.round(N*Math.abs(t2-t1)));
+  for(let i=0;i<=steps;i++){ const t=t1+(i/steps)*(t2-t1); pts.push(Q(P20,C,P57,t)); }
+  return pts;
+}
+function linePts(X,Y){ return [X,Y]; }
+function paintIntegration(D,P){
+  const AB=getAB(); if(!AB) return;
+  const {A,B} = AB;
+  const P10=state.gates['10'], P34=state.gates['34'];
+  const w=8;
+  const has20 = D.has('20') || P.has('20');
+  const has10 = D.has('10') || P.has('10');
+  const has57 = D.has('57') || P.has('57');
+  const has34 = D.has('34') || P.has('34');
+
+  if(has20 && !has10 && !has57 && !has34){ const pts=spine(0.0, 1/3, 60); let s=styleForGate('20',D,P,pts); drawStroke(pts, s||'#111', w); }
+  if(has10 && !has20 && !has57 && !has34 && P10){ const pts=linePts(P10,B); let s=styleForGate('10',D,P,pts); drawStroke(pts, s||'#111', w); }
+  if(has57 && !has20 && !has10 && !has34){ const pts=spine(1.0, 2/3, 60); let s=styleForGate('57',D,P,pts); drawStroke(pts, s||'#111', w); }
+  if(has34 && !has20 && !has10 && !has57 && P34){ const pts=linePts(P34,A); let s=styleForGate('34',D,P,pts); drawStroke(pts, s||'#111', w); }
+
+  if(has20 && has10){ let pts1=spine(0.0, 1/3, 80); let s1=styleForGate('20',D,P,pts1); drawStroke(pts1, s1||'#111', w);
+                      if(P10){ let pts2=linePts(B,P10); let s2=styleForGate('10',D,P,pts2); drawStroke(pts2, s2||'#111', w); } }
+  if(has57 && has34){ let pts1=spine(1.0, 2/3, 80); let s1=styleForGate('57',D,P,pts1); drawStroke(pts1, s1||'#111', w);
+                      if(P34){ let pts2=linePts(A,P34); let s2=styleForGate('34',D,P,pts2); drawStroke(pts2, s2||'#111', w); } }
+  if(has57 && has10){ let pts1=spine(1.0, 1/3, 100); let s1=styleForGate('57',D,P,pts1); drawStroke(pts1, s1||'#111', w);
+                      if(P10){ let pts2=linePts(B,P10); let s2=styleForGate('10',D,P,pts2); drawStroke(pts2, s2||'#111', w); } }
+  if(has20 && has34){ let pts1=spine(0.0, 1/3, 80); let s1=styleForGate('20',D,P,pts1); drawStroke(pts1, s1||'#111', w);
+                      if(P34){ let pts2=linePts(A,P34); let s2=styleForGate('34',D,P,pts2); drawStroke(pts2, s2||'#111', w); } }
+  if(has20 && has57){ const pts=spine(0.0, 1.0, 200); const parts=halfSegments(pts);
+                      let s1=styleForGate('20',D,P,parts[0]); drawStroke(parts[0], s1||'#111', w);
+                      let s2=styleForGate('57',D,P,parts[1]); drawStroke(parts[1], s2||'#111', w); }
+}
+
+
+// All channels
+function paintChannels(D,P){
+  drawChannels();
+  paintChannelBaseOutlined();
+
+  const integ = new Set(['10-20','20-10','10-34','34-10','10-57','57-10','34-57','57-34','20-34','34-20','20-57','57-20']);
+  for(const [id,ch] of Object.entries(state.channels)){
+    if(integ.has(id)) continue;
+    if(D.has(ch.a) || P.has(ch.a) || D.has(ch.b) || P.has(ch.b)) paintChannelHalvesGeneric(id, ch, D, P);
+  }
+  paintIntegration(D,P);
+}
+
+// Centers
+function paintCenters(centersDefined){
+  drawCenters(); drawCenterHandles();
+  gCenters.querySelectorAll('.center-shape').forEach(node=>{
+    const id=node.dataset.id;
+    if(centersDefined.has(id)){ node.classList.add('defined-center'); node.classList.remove('undefined-center'); }
+    else{ node.classList.add('undefined-center'); node.classList.remove('defined-center'); }
+  });
+}
+
+
+// ===== v8r1: center clip mask + edge overlay with openings =====
+function ensureChannelMask(){
+  const mask = document.getElementById('clipCenters');
+  if(!mask) return;
+  while(mask.firstChild) mask.removeChild(mask.firstChild);
+  const svgEl = document.getElementById('svg');
+  const vb = (svgEl.getAttribute('viewBox')||'0 0 720 1080').split(/\s+/).map(parseFloat);
+  const rect = document.createElementNS(NS,'rect');
+  rect.setAttribute('x', vb[0]); rect.setAttribute('y', vb[1]);
+  rect.setAttribute('width', vb[2]); rect.setAttribute('height', vb[3]);
+  rect.setAttribute('fill', 'white');
+  mask.appendChild(rect);
+  // Use only center FILLs (stroke none) so we don't over-clip channels at edges
+  gCenters.querySelectorAll('.center-shape').forEach(s=>{
+    const clone = s.cloneNode(true);
+    clone.removeAttribute('class');
+    clone.setAttribute('fill','black');
+    clone.setAttribute('stroke','none');
+    mask.appendChild(clone);
+  });
+}
+
+function paintEdgeOverlayAndOpenings(D,P, centersDefined){
+  // Remove old overlay groups if any
+  const oldTop = document.getElementById('gCenterEdgeTop');
+  if(oldTop && oldTop.parentNode) oldTop.parentNode.removeChild(oldTop);
+  const oldOpen = document.getElementById('gCenterOpeners');
+  if(oldOpen && oldOpen.parentNode) oldOpen.parentNode.removeChild(oldOpen);
+
+  // Draw fresh perimeter on top (crisp, continuous outline)
+  const edge = document.createElementNS(NS,'g'); edge.setAttribute('id','gCenterEdgeTop'); gCenters.appendChild(edge);
+  gCenters.querySelectorAll('.center-shape').forEach(s=>{
+    const clone = s.cloneNode(true);
+    clone.setAttribute('class','center-edge-top');
+    clone.setAttribute('fill','none');
+    const sw = s.getAttribute('stroke-width') || '2';
+    clone.setAttribute('stroke-width', sw);
+    edge.appendChild(clone);
+  });
+
+  // Punch tiny "openings" only at gates that are activated (D or P)
+  const openers = document.createElementNS(NS,'g'); openers.setAttribute('id','gCenterOpeners'); gCenters.appendChild(openers);
+  gGates.querySelectorAll('.gate').forEach(el=>{
+    const gid = el.getAttribute('data-id');
+    const centerId = GATE_TO_CENTER[gid] || null;
+    if(!centerId) return;
+    const isActive = (D.has(gid) || P.has(gid));
+    if(!isActive) return;
+    const circle = el.querySelector('circle');
+    if(!circle) return;
+    const cx = parseFloat(circle.getAttribute('cx')||'0');
+    const cy = parseFloat(circle.getAttribute('cy')||'0');
+    const r  = parseFloat(circle.getAttribute('r')||'6');
+    let sw = 2;
+    const refCenter = gCenters.querySelector(`.center-shape[data-id="${centerId}"]`);
+    if(refCenter) sw = parseFloat(refCenter.getAttribute('stroke-width')||'2');
+    const ropen = r + Math.max(2, sw*0.75);
+    const color = centersDefined.has(centerId) ? CYAN : (getComputedStyle(document.documentElement).getPropertyValue('--undef-bg') || '#fff');
+    const opener = document.createElementNS(NS,'circle');
+    opener.setAttribute('class','center-open');
+    opener.setAttribute('cx', cx);
+    opener.setAttribute('cy', cy);
+    opener.setAttribute('r', ropen);
+    opener.setAttribute('fill', String(color).trim());
+    opener.setAttribute('stroke','none');
+    openers.appendChild(opener);
+  });
+}
+
+
+// Apply
+function applyBodygraph(json){
+  const { centersDefined, D, P } = parseApi(json);
+  paintCenters(centersDefined);
+  paintChannels(D,P);
+  paintGates(D,P, centersDefined);
+  paintEdgeOverlayAndOpenings(D,P, centersDefined);
+  const status=document.getElementById('renderStatus'); if(status) status.textContent='Rendered.';
+}
+
+// API + wiring
+async function getBodygraphFromApi({birthdate,birthtime,location}){
+  const headers={ 'Content-Type':'application/json' };
+  const body=JSON.stringify({birthdate,birthtime,location});
+  const res=await fetch(HD_ENDPOINT,{method:'POST',headers,body});
+  if(!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+(function init(){
+  const btn=document.getElementById('renderBtn');
+  const sample=document.getElementById('loadSampleBtn');
+  if(btn){
+    btn.addEventListener('click', async ()=>{
+      const birthdate=document.getElementById('hdDate').value.trim();
+      const birthtime=document.getElementById('hdTime').value.trim();
+      const location=document.getElementById('hdLoc').value.trim();
+      const status=document.getElementById('renderStatus');
+      try{ status.textContent='Fetching…'; const json=await getBodygraphFromApi({birthdate,birthtime,location});
+        status.textContent='Rendering…'; applyBodygraph(json); status.textContent='Done.'; }
+      catch(e){ console.error(e); status.textContent='Error'; }
+    });
+  }
+  if(sample){
+    sample.addEventListener('click', ()=>{ applyBodygraph(window.__HD_EXAMPLE_JSON__); const s=document.getElementById('renderStatus'); if(s) s.textContent='Sample rendered.'; });
+  }
+})();
+
+// sample
+window.__HD_EXAMPLE_JSON__ = {
+  "type":"Manifestor","profile":"6/2",
+  "channels_short":["25-51","7-31"],
+  "centers":["Ego","G","Throat"],
+  "strategy":"Inform","authority":"Ego Projected",
+  "incarnation_cross":"Left Angle Cross of Education (12/11 | 25/46)",
+  "definition":"Single Definition","signature":"Peace","not_self_theme":"Anger",
+  "cognition":"Taste","determination":"Direct Light","variables":"PLR DLR",
+  "motivation":"Need","transference":"Guilt","perspective":"Possibility","distraction":"Probability",
+  "circuitries":"Individual, Collective Logic",
+  "channels_long":["Initiation (25-51)","The Alpha (7-31)"],
+  "gates":["12","11","54","53","46","15","7","33","41","38","1","25","61","62","20","51","27","31","43"],
+  "activations":{
+    "design": { "sun":"25.2","earth":"46.2","north_node":"61.6","south_node":"62.6","moon":"20.3","merucy":"51.2","venus":"27.1","mars":"12.1","jupiter":"31.2","saturn":"41.3","uranus":"38.5","nepture":"54.2","pluto":"43.2" },
+    "personality": { "sun":"12.6","earth":"11.6","north_node":"54.5","south_node":"53.5","moon":"46.6","mercury":"15.3","venus":"33.6","mars":"7.2","jupiter":"33.5","saturn":"41.5","uranus":"38.4","neptune":"54.1","pluto":"1.6" }
+  },
+  "birth_date_UTC":"1991-06-19T14:32:00.000Z"
+};
+</script>
+
+</body>
+</html>
