@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Discover your design</title>
+  <style>
+    :root{ --cyan:#00bcd4; --ink:#0a0f12; --muted:#64748b; }
+    *{ box-sizing:border-box }
+    html,body{ margin:0; height:100% }
+    body{ background:#fff; color:var(--ink); font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .wrap{ max-width:1200px; margin:0 auto; padding:24px; }
+    .card{ background:#f7fbff; border:1px solid #cdeef5; border-radius:14px; padding:16px; box-shadow:0 8px 36px rgba(0,0,0,.06) }
+
+    h1{ margin:0 0 12px; font-size:22px }
+    label{ font-size:12px; color:var(--ink); font-weight:600 }
+    .row{ display:flex; gap:10px; align-items:end; margin:10px 0 }
+    select, input[type="time"], input[type="text"]{
+      padding:10px 12px; border:1px solid #d1e7ef; border-radius:10px; font-size:14px; outline:none
+    }
+    button.primary{ background:var(--cyan); color:#fff; border:0; border-radius:12px; padding:10px 14px; cursor:pointer }
+
+    /* screens */
+    #view-intake{ display:block }
+    #view-chart{ display:none }
+    .layout{ display:grid; grid-template-columns:260px 1fr 260px; gap:16px; align-items:start; }
+
+    /* iframe frame */
+    #chartFrameWrap{ background:#fff; border:1px solid #e6eef2; border-radius:12px; padding:12px; }
+    #chartTitle{ text-align:center; font-size:15px; font-weight:800; letter-spacing:.08em; margin:6px 0 10px; }
+    #chartFrame{ width:100%; height:1080px; border:0; display:block; }
+    #chartActions{ display:flex; justify-content:center; margin-top:10px; }
+    #detailsBtn{ background:#111; color:#fff; border:0; border-radius:10px; padding:8px 12px; cursor:pointer; }
+
+    /* activation columns */
+    .col{ background:#fff; border:1px solid #e6eef2; border-radius:12px; padding:12px }
+    .colTitle{ font-size:15px; font-weight:800; letter-spacing:.08em; margin:4px 0 10px }
+    .colTitle.design{ color:var(--cyan) }
+    .colTitle.person{ color:#111 }
+    .actItem{ display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:10px; background:#fff }
+    .actLeft{ display:flex; align-items:center; gap:10px }
+    .actPlanet{ width:22px; text-align:center; font-size:18px; opacity:.9 }
+    .actVal{ font-size:18px; font-weight:600 }
+    .exal{ color:#2e7d32; margin-left:6px }
+    .detr{ color:#c62828; margin-left:6px }
+
+    /* first screen card width */
+    #view-intake.card{ max-width:480px }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- Screen 1: birth inputs + name -->
+    <div id="view-intake" class="card">
+      <h1>Discover your design</h1>
+      <div class="row">
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center;">
+          <label>Name</label>
+          <input id="hdName" type="text" placeholder="your name" style="width:260px">
+        </div>
+      </div>
+      <div class="row" style="display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:8px; align-items:end;">
+        <label>Birth Date</label>
+        <select id="monthSel"></select>
+        <select id="daySel"></select>
+        <select id="yearSel"></select>
+      </div>
+      <div class="row">
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center;">
+          <label>Birth Time (12h)</label>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="hh12"></select> : <select id="mm12"></select> <select id="ampm12"><option>AM</option><option>PM</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div style="display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center;">
+          <label>Location</label>
+          <input id="hdLoc" type="text" placeholder="City, country" style="width:260px">
+        </div>
+      </div>
+      <div class="row">
+        <button id="generateBtn" class="primary">Generate chart</button>
+        <span id="renderStatus" style="color:var(--muted)"></span>
+      </div>
+    </div>
+
+    <!-- Screen 2: chart + name + columns -->
+    <div id="view-chart" class="layout">
+      <div id="designCol" class="col"><div class="colTitle design">DESIGN</div></div>
+      <div>
+        <div id="chartFrameWrap">
+          <div id="chartTitle" style="display:none;"></div>
+          <iframe id="chartFrame" src="/WORKING.html" loading="eager"></iframe>
+        </div>
+        <div id="chartActions">
+          <button id="detailsBtn" title="View chart details">Chart details</button>
+        </div>
+      </div>
+      <div id="personCol" class="col"><div class="colTitle person">PERSONALITY</div></div>
+    </div>
+  </div>
+
+  <script>
+    // Planet symbols
+    const PLANET_SYM = { sun:"☉", earth:"♁", moon:"☾", mercury:"☿", venus:"♀", mars:"♂", jupiter:"♃", saturn:"♄", uranus:"♅", neptune:"♆", pluto:"♇", north_node:"☊", south_node:"☋", merucy:"☿", nepture:"♆" };
+
+    // Populate date dropdowns (1915..current); keep days valid per month
+    (function setupDOB(){
+      const m = document.getElementById('monthSel');
+      const d = document.getElementById('daySel');
+      const y = document.getElementById('yearSel');
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      months.forEach((name,idx)=>{ const o=document.createElement('option'); o.value=String(idx+1).padStart(2,'0'); o.textContent=name; m.appendChild(o); });
+      for(let i=1;i<=31;i++){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i); d.appendChild(o); }
+      const now = new Date().getFullYear();
+      for(let yr=now; yr>=1915; yr--){ const o=document.createElement('option'); o.value=String(yr); o.textContent=String(yr); y.appendChild(o); }
+      function daysInMonth(Y,M){ return new Date(Y, M, 0).getDate(); }
+      function normalize(){ const max=daysInMonth(parseInt(y.value||now,10), parseInt(m.value||1,10));
+        Array.from(d.options).forEach(opt=>{ opt.disabled = parseInt(opt.value,10) > max; });
+        if(parseInt(d.value||'1',10) > max) d.value = String(max).padStart(2,'0');
+      }
+      m.addEventListener('change', normalize); y.addEventListener('change', normalize);
+      normalize();
+      // init 12h time selects
+      const hhSel = document.getElementById('hh12');
+      const mmSel = document.getElementById('mm12');
+      for(let h=1; h<=12; h++){ const o=document.createElement('option'); o.value=String(h); o.textContent=String(h); if(h===12) o.selected=true; hhSel.appendChild(o); }
+      for(let m=0; m<60; m++){ const o=document.createElement('option'); o.value=String(m).padStart(2,'0'); o.textContent=o.value; if(m===0) o.selected=true; mmSel.appendChild(o); }
+      document.getElementById('ampm12').value='PM';
+    })();
+
+    // Build activation columns
+    function renderActivations(json){
+      const dCol = document.getElementById('designCol');
+      const pCol = document.getElementById('personCol');
+      dCol.innerHTML = '<div class="colTitle design">DESIGN</div>';
+      pCol.innerHTML = '<div class="colTitle person">PERSONALITY</div>';
+      function build(obj, side){
+        if(!obj) return '';
+        const order = ["sun","earth","north_node","south_node","moon","mercury","venus","mars","jupiter","saturn","uranus","neptune","pluto"];
+        const entries = Object.entries(obj).sort((a,b)=> order.indexOf(a[0].toLowerCase()) - order.indexOf(b[0].toLowerCase()));
+        return entries.map(([k,v])=>{
+          const key=k.toLowerCase(); const sym=PLANET_SYM[key]||"";
+          let gl="", up=false, down=false;
+          if(typeof v === 'string'){ gl = v; }
+          else if(v && typeof v === 'object'){
+            gl = v.value || v.gate_line || v.gate || "";
+            up = !!(v.exaltation || v.exalt || v.dignity === 'exaltation');
+            down = !!(v.detriment || v.fall || v.dignity === 'detriment');
+          }
+          const ex = up ? '<span class="exal">▲</span>' : '';
+          const de = down ? '<span class="detr">▼</span>' : '';
+          const color = side==='design' ? 'style="color:var(--cyan)"' : 'style="color:#0a0f12"';
+          return `<div class="actItem" ${color}>
+                    <div class="actLeft">
+                      <div class="actPlanet">${sym}</div>
+                      <div style="opacity:.85;text-transform:capitalize">${key.replace('_',' ')}</div>
+                    </div>
+                    <div class="actVal">${gl}${ex}${de}</div>
+                  </div>`;
+        }).join('');
+      }
+      dCol.innerHTML += build(json?.activations?.design, 'design');
+      pCol.innerHTML += build(json?.activations?.personality, 'personality');
+    }
+
+    // Hide EVERYTHING in the embedded WORKING.html except the bodygraph itself
+    function sanitizeIframe(iframeDoc){
+      const hideSelectors = [
+        '.section', '#leftPanel', '#centerPanel', '#gatePanel', '#channelPanel',
+        '#workspace', '#modeSection', '#verticalGuideSection', '#dataSection',
+        '#gGrid', '#gGuide', '#grid', '#guide', '#handles', '#centerline', '#gCenterline',
+        '#controls', '#bgfile', '#showGrid', '#snap', '#snapStep', '#showGuide', '#guideX', '#magnet', '#centerOnGuide',
+        '#save', '#load', '#loadSampleBtn'
+      ];
+      hideSelectors.forEach(sel=>{
+        iframeDoc.querySelectorAll(sel).forEach(el=>{ el.style.display = 'none'; });
+      });
+      const svg = iframeDoc.querySelector('svg#svg');
+      if(svg){ svg.style.background = '#fff'; svg.style.width = '100%'; }
+    }
+
+    async function generateChart(){
+      const m = document.getElementById('monthSel').value;
+      const d = document.getElementById('daySel').value;
+      const y = document.getElementById('yearSel').value;
+      const hh = parseInt(document.getElementById('hh12').value||'12',10);
+      const mm = document.getElementById('mm12').value||'00';
+      const ampm = (document.getElementById('ampm12').value||'AM');
+      let HH = hh;
+      if(ampm==='PM' && HH!==12) HH+=12;
+      if(ampm==='AM' && HH===12) HH=0;
+      const t = String(HH).padStart(2,'0') + ':' + mm;
+      const loc = (document.getElementById('hdLoc').value || '').trim();
+      const name = (document.getElementById('hdName').value || '').trim();
+      const status = document.getElementById('renderStatus');
+      const monthName = n => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(n,10)-1];
+      const birthdate = `${d}-${monthName(m)}-${String(y).slice(-2)}`;
+
+      try{
+        status.textContent = 'Generating…';
+        const r = await fetch('/api/bodygraph', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ birthdate, birthtime: t, location: loc })
+        });
+        const json = await r.json();
+
+        // Save JSON + name for details page
+        try{
+          sessionStorage.setItem('hd_last_chart', JSON.stringify(json));
+          sessionStorage.setItem('hd_name', name);
+        }catch(e){}
+
+        // Move to chart screen
+        document.getElementById('view-intake').style.display='none';
+        document.getElementById('view-chart').style.display='grid';
+
+        // Set title
+        const titleEl = document.getElementById('chartTitle');
+        if(name){
+          titleEl.textContent = name;
+          titleEl.style.display = 'block';
+        }else{
+          titleEl.style.display = 'none';
+        }
+
+        // Wire iframe
+        const frame = document.getElementById('chartFrame');
+        const onLoad = () => {
+          const doc = frame.contentDocument || frame.contentWindow.document;
+          sanitizeIframe(doc);
+          try{ frame.contentWindow.applyBodygraph(json); }catch(e){ console.warn('applyBodygraph not found', e); }
+          renderActivations(json);
+          status.textContent = '';
+          frame.removeEventListener('load', onLoad);
+        };
+        if (frame.contentDocument && frame.contentDocument.readyState === 'complete') onLoad();
+        else frame.addEventListener('load', onLoad);
+
+      }catch(err){
+        console.error(err);
+        status.textContent = 'Error';
+      }
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', generateChart);
+    document.getElementById('detailsBtn').addEventListener('click', ()=>{
+      window.location.href = 'details.html';
+    });
+  </script>
+</body>
+</html>
