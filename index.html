@@ -1,341 +1,145 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Discover your design</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Free Human Design Chart | Designing Us</title>
 <style>
   :root{
-    --bg:#ffffff;
-    --ink:#0a0f12;
-    --muted:#6b7a80;
-    --cyan:#00d5ff;
-    --panel:#f6f8f9;
-    --ring:#e1e6e8;
+    --bg:#0e1116; --card:#151924; --ink:#e9eef0; --muted:#a8b5bb; --accent:#00d5ff;
+    --border:#202a34;
   }
-  html,body{height:100%;margin:0;background:#fff;color:#0a0f12;font-family: ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-
-  .wrap{max-width:1200px;margin:0 auto;padding:20px;display:grid;grid-template-columns: 360px 1fr;gap:16px}
-  .left{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:16px;box-shadow:0 8px 28px rgba(0,0,0,.06)}
-  .right{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;min-height:80vh}
-
-  h1{margin:0 0 8px;font-size:18px}
-  label{display:block;font-size:12px;color:#526269;margin-bottom:6px}
-  .row{margin-bottom:12px}
-  input, select, button{
-    width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px;
-    border:1px solid #cfd6d9; background:#fff; color:#0a0f12;
-    font-size:14px;
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  h1{margin:0 0 8px;font-size:20px}
+  h2{margin:0 0 10px;font-size:16px;color:#cdd7db}
+  label{display:block;margin:8px 0 4px;color:#c0cbd0}
+  input,button{font:inherit}
+  input[type="text"],input[type="time"],input[type="date"]{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a3641;background:#0c1016;color:#eaf1f3
   }
-  input::placeholder{color:#9aa7ac}
-  .two{display:grid; grid-template-columns: 1fr 1fr; gap:8px}
-  .three{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px}
-  .four{display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:8px}
-  .btn{background:#0a0f12;color:#fff;border-color:#0a0f12;cursor:pointer}
-  .btn:disabled{opacity:.6;cursor:not-allowed}
-  .hint{font-size:12px;color:#6b7a80;margin-top:6px}
-  .title{font-weight:700;font-size:18px}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .actions{margin-top:12px;display:flex;gap:10px;align-items:center}
+  button{
+    padding:10px 14px;border-radius:10px;border:1px solid #2a3641;background:#0c1117;color:#eaf1f3;cursor:pointer
+  }
+  button.primary{background:linear-gradient(180deg,#10b8d7,#009cc2);border-color:#1188a1}
+  .hint{color:var(--muted);font-size:12px}
+  .hidden{display:none !important}
 
-  /* Chart stage */
-  .stage{display:none; gap:16px}
-  .stageHeader{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:4px;margin-bottom:4px}
-  .stageName{font-size:16px;font-weight:700}
-  .stageUTC{font-size:12px;color:#6b7a80}
-  .stageMain{display:grid;grid-template-columns: 220px minmax(0,1fr) 220px; gap:12px; align-items:center}
+  /* Chart screen: 3-column layout (Design | Graph | Personality) */
+  .chartLayout{
+    display:grid;grid-template-columns: 1fr minmax(560px, 720px) 1fr;gap:16px;align-items:start
+  }
+  .col{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px}
+  .colTitle{margin:4px 0 10px;font-size:13px;color:#c8d2d6;opacity:.85}
+  .stack{display:flex;flex-direction:column;gap:8px}
+  .pill{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;background:#0c1016;border:1px solid #27313a}
+  .pill b{color:#dfe7ea}
+  .graphBox{display:flex;flex-direction:column;align-items:center}
+  .graphFrame{
+    width:100%;max-width:720px;aspect-ratio: 2/3;border:0;display:block;border-radius:10px;overflow:hidden;background:#fff
+  }
+  .chartActions{margin-top:10px}
+  .chartActions button{min-width:140px}
 
-  .col{border:1px solid var(--ring); border-radius:12px; padding:12px; background:#fff; min-height:60vh}
-  .col h3{margin:0 0 8px; font-size:14px; letter-spacing:.02em; color:#425157}
-  .actRow{display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #edf1f2}
-  .actRow:last-child{border-bottom:none}
-  .planet{display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums}
-  .planet .sym{width:20px;text-align:center}
-  .planet .label{font-size:12px;color:#516166}
-  .val{font-weight:700}
-  .cyan{color:var(--cyan)}
-  .black{color:#0a0f12}
-
-  /* iFrame chart */
-  .frameWrap{border:1px solid var(--ring); border-radius:12px; overflow:hidden; background:#fff; height:calc(80vh); display:flex}
-  #chartFrame{flex:1; width:100%; height:100%; border:0; background:#fff}
-
-  .actions{display:flex; justify-content:center; margin-top:8px}
-  .linkBtn{appearance:none;border:1px solid #cfd6d9;border-radius:10px;padding:10px 14px;background:#fff;cursor:pointer}
-  .linkBtn:hover{border-color:#aab5b9}
-
-  /* First-screen only style */
-  .onlyBirth{grid-template-columns: 1fr; max-width:680px}
-  .heroBox{background:#fff;border:1px solid var(--ring);border-radius:16px;padding:18px;box-shadow:0 10px 36px rgba(0,0,0,.06)}
-  .heroHeader{display:flex;align-items:center;gap:8px; margin-bottom:8px}
-  .badge{background:var(--cyan); color:#0a0f12; font-weight:700; border-radius:999px; padding:4px 10px; font-size:12px}
-
-  @media (max-width:1024px){
-    .wrap{grid-template-columns:1fr}
-    .stageMain{grid-template-columns: 1fr; }
-    .col{min-height:auto}
+  @media (max-width: 980px){
+    .row{grid-template-columns:1fr}
+    .chartLayout{grid-template-columns:1fr}
   }
 
-  /* Hide anything editor-ish inside the WORKING iframe if it’s present */
-  .iframeCSS {
-    display:none;
+  /* Autocomplete dropdown */
+  .ac-wrap{position:relative}
+  .ac-list{
+    position:absolute;left:0;right:0;top:100%;z-index:30;
+    background:#0b0f14;border:1px solid #2a3641;border-radius:10px;margin-top:6px;overflow:hidden
   }
+  .ac-item{padding:8px 10px;cursor:pointer}
+  .ac-item:hover{background:#0f151c}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<!-- ============ Screen 1: Birth info only ============ -->
-<div class="wrap onlyBirth" id="birthScreen">
-  <div class="heroBox">
-    <div class="heroHeader">
-      <div class="badge">Discover your design</div>
-      <div class="title">Enter your birth information</div>
-    </div>
-
+  <!-- Birth screen -->
+  <section id="birthScreen" class="card">
+    <h1>Get your free Human Design chart</h1>
+    <p class="hint">Enter your birth data. City suggestions will appear as you type.</p>
     <div class="row">
-      <label for="name">Name</label>
-      <input id="name" type="text" placeholder="your name"/>
-    </div>
-
-    <div class="row">
-      <label>Birth date</label>
-      <div class="three">
-        <select id="bDay"></select>
-        <select id="bMonth"></select>
-        <select id="bYear"></select>
+      <div>
+        <label for="birthDate">Birth date</label>
+        <input id="birthDate" type="date" />
+      </div>
+      <div>
+        <label for="birthTime">Birth time</label>
+        <input id="birthTime" type="time" />
+      </div>
+      <div class="ac-wrap">
+        <label for="birthPlace">Birth city &amp; country</label>
+        <input id="birthPlace" type="text" placeholder="e.g., Tampa, United States"/>
+        <div id="placeList" class="ac-list hidden"></div>
       </div>
     </div>
-
-    <div class="row">
-      <label>Birth time (12h)</label>
-      <div class="four">
-        <select id="tHour"></select>
-        <select id="tMinute"></select>
-        <select id="tAmPm">
-          <option>AM</option>
-          <option>PM</option>
-        </select>
-        <div class="hint" style="align-self:center">Use your best exact time</div>
-      </div>
-    </div>
-
-    <div class="row">
-      <label for="loc">Birth location</label>
-      <input id="loc" type="text" placeholder="city, country"/>
-    </div>
-
-    <div class="row">
-      <button class="btn" id="genBtn">Generate chart</button>
-      <div id="status" class="hint"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Screen 2: Chart + Activation columns ============ -->
-<div class="wrap" id="chartScreen" style="display:none">
-  <div class="right" style="grid-column:1 / -1; padding:12px">
-    <div class="stageHeader">
-      <div class="stageName" id="stageName"></div>
-      <div class="stageUTC" id="stageUTC"></div>
-    </div>
-
-    <div class="stage" id="stage">
-      <div class="col">
-        <h3 class="cyan">Design</h3>
-        <div id="designList"></div>
-      </div>
-
-      <div class="frameWrap">
-        <iframe id="chartFrame" src="WORKING.html#embed" loading="eager"></iframe>
-      </div>
-
-      <div class="col">
-        <h3 class="black">Personality</h3>
-        <div id="personList"></div>
-      </div>
-    </div>
-
     <div class="actions">
-      <button class="linkBtn" id="detailsBtn">Chart details</button>
+      <button id="generateBtn" class="primary">Generate chart</button>
+      <span id="status" class="hint"></span>
     </div>
-  </div>
+  </section>
+
+  <!-- Chart screen -->
+  <section id="chartScreen" class="hidden">
+    <div class="chartLayout">
+
+      <!-- Design (left) -->
+      <aside class="col">
+        <h2 class="colTitle">Design</h2>
+        <div id="designList" class="stack"></div>
+      </aside>
+
+      <!-- Graph (middle) -->
+      <main class="col graphBox">
+        <iframe id="graphFrame" class="graphFrame" src="WORKING.html" loading="lazy"></iframe>
+        <div class="chartActions">
+          <button id="detailsBtn">Chart details</button>
+        </div>
+      </main>
+
+      <!-- Personality (right) -->
+      <aside class="col">
+        <h2 class="colTitle">Personality</h2>
+        <div id="personalityList" class="stack"></div>
+      </aside>
+
+    </div>
+  </section>
+
 </div>
 
 <script>
-/* =============== Small helpers =============== */
-const $ = sel => document.querySelector(sel);
-const pad2 = n => String(n).padStart(2,'0');
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const PLANETS = [
-  ["sun","☉","Sun"], ["earth","♁","Earth"],
-  ["north_node","☊","N. Node"], ["south_node","☋","S. Node"],
-  ["moon","☽","Moon"], ["mercury","☿","Mercury"], ["venus","♀","Venus"], ["mars","♂","Mars"],
-  ["jupiter","♃","Jupiter"], ["saturn","♄","Saturn"], ["uranus","♅","Uranus"], ["neptune","♆","Neptune"], ["pluto","♇","Pluto"]
-];
-// handle common typos in sample payloads
-const FALLBACK_KEYS = { merucy:"mercury", nepture:"neptune" };
+/* -----------------------------
+   1) City autocomplete (Nominatim)
+--------------------------------*/
+const placeInput = document.getElementById('birthPlace');
+const placeList  = document.getElementById('placeList');
+let acTimer=null;
 
-function initBirthSelectors(){
-  // day
-  const bDay = $("#bDay");
-  for(let d=1; d<=31; d++){ const o=document.createElement('option'); o.value=d; o.textContent=d; bDay.appendChild(o); }
-  // month
-  const bMonth = $("#bMonth");
-  MONTHS.forEach((m,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=m; bMonth.appendChild(o); });
-  // year (back to 1915)
-  const bYear = $("#bYear");
-  const now = new Date().getFullYear();
-  for(let y=now; y>=1915; y--){ const o=document.createElement('option'); o.value=y; o.textContent=y; bYear.appendChild(o); }
+placeInput.addEventListener('input', () => {
+  const q = placeInput.value.trim();
+  clearTimeout(acTimer);
+  if(q.length < 2){ placeList.classList.add('hidden'); placeList.innerHTML=''; return; }
+  acTimer = setTimeout(async () => {
+    try{
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', q);
+      url.searchParams.set('format','jsonv2');
+      url.searchParams.set('addressdetails','1');
+      url.searchParams.set('limit','8');
 
-  // time
-  const tHour = $("#tHour");
-  for(let h=1; h<=12; h++){ const o=document.createElement('option'); o.value=h; o.textContent=pad2(h); tHour.appendChild(o); }
-  const tMinute = $("#tMinute");
-  for(let m=0; m<60; m+=1){ const o=document.createElement('option'); o.value=m; o.textContent=pad2(m); tMinute.appendChild(o); }
-
-  // sensible defaults
-  const dflt = new Date();
-  bDay.value = dflt.getDate();
-  bMonth.value = dflt.getMonth();
-  bYear.value = dflt.getFullYear();
-  tHour.value = ( (dflt.getHours()%12) || 12 );
-  tMinute.value = dflt.getMinutes();
-  $("#tAmPm").value = dflt.getHours()>=12 ? "PM" : "AM";
-}
-initBirthSelectors();
-
-function toApiDate(day, monthIdx, year){
-  // API expects DD-MMM-YY
-  const dd = pad2(day);
-  const mmm = MONTHS[monthIdx];
-  const yy = String(year).slice(-2);
-  return `${dd}-${mmm}-${yy}`;
-}
-function toApiTime(h12, m, ampm){
-  let h = parseInt(h12,10);
-  if(ampm==="PM" && h!==12) h+=12;
-  if(ampm==="AM" && h===12) h=0;
-  return `${pad2(h)}:${pad2(m)}`;
-}
-
-/* =============== Render columns =============== */
-function renderActivationList(container, side){
-  container.innerHTML = "";
-  if(!side) return;
-  // Normalize keys (handle possible misspellings too)
-  const norm = {};
-  for(const [k,v] of Object.entries(side)){
-    const key = FALLBACK_KEYS[k] || k;
-    norm[key] = v && v.value ? v.value : v;
-  }
-  for(const [key, sym, label] of PLANETS){
-    const val = norm[key] || "";
-    const row = document.createElement('div'); row.className = "actRow";
-    const left = document.createElement('div'); left.className = "planet";
-    const s = document.createElement('div'); s.className = "sym"; s.textContent = sym;
-    const l = document.createElement('div'); l.className = "label"; l.textContent = label;
-    left.appendChild(s); left.appendChild(l);
-    const right = document.createElement('div'); right.className = "val"; right.textContent = val || "—";
-    row.appendChild(left); row.appendChild(right);
-    container.appendChild(row);
-  }
-}
-
-/* =============== API =============== */
-const HD_URL = "https://api.humandesignapi.nl/v1/bodygraphs";
-// If you later wire a Vercel proxy, try that first:
-async function fetchBodygraph(payload){
-  // Try your proxy first (optional)
-  try{
-    const r1 = await fetch("/api/bodygraph", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
-    if(r1.ok) return await r1.json();
-  }catch(_){}
-  // Fallback to public endpoint (no keys)
-  const r = await fetch(HD_URL, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
-  if(!r.ok) throw new Error(`API ${r.status}`);
-  return r.json();
-}
-
-/* =============== Wire the flow =============== */
-const birthScreen = $("#birthScreen");
-const chartScreen = $("#chartScreen");
-const statusEl = $("#status");
-
-async function handleGenerate(){
-  const name = $("#name").value.trim();
-  const birthdate = toApiDate(parseInt($("#bDay").value,10), parseInt($("#bMonth").value,10), parseInt($("#bYear").value,10));
-  const birthtime = toApiTime($("#tHour").value, $("#tMinute").value, $("#tAmPm").value);
-  const location = $("#loc").value.trim();
-
-  if(!birthdate || !birthtime || !location){
-    statusEl.textContent = "Please complete all fields.";
-    return;
-  }
-  statusEl.textContent = "Fetching…";
-  $("#genBtn").disabled = true;
-
-  try{
-    const json = await fetchBodygraph({ birthdate, birthtime, location });
-    // cache for details page
-    sessionStorage.setItem("HD_BODYGRAPH_JSON", JSON.stringify(json));
-    sessionStorage.setItem("HD_NAME", name);
-
-    // switch screens
-    birthScreen.style.display = "none";
-    chartScreen.style.display = "block";
-    $("#stage").style.display = "grid";
-    $("#stageName").textContent = name || "";
-    // show UTC under name (if present)
-    const utc = json.birth_date_UTC ? new Date(json.birth_date_UTC) : null;
-    $("#stageUTC").textContent = utc ? `UTC: ${utc.getUTCFullYear()}-${pad2(utc.getUTCMonth()+1)}-${pad2(utc.getUTCDate())} ${pad2(utc.getUTCHours())}:${pad2(utc.getUTCMinutes())}` : "";
-
-    // render activation columns
-    renderActivationList($("#designList"), json.activations && json.activations.design);
-    renderActivationList($("#personList"), json.activations && json.activations.personality);
-
-    // hand chart JSON to the WORKING renderer (iframe)
-    const frame = document.getElementById("chartFrame");
-    const callApply = ()=>{
-      try{
-        if(frame.contentWindow && typeof frame.contentWindow.applyBodygraph === "function"){
-          frame.contentWindow.applyBodygraph(json);
-          // Also try to hide any editor UI inside the iframe (in case your WORKING hides by CSS already, this is extra-safe)
-          const doc = frame.contentDocument;
-          if(doc){
-            const hide = doc.createElement("style");
-            hide.textContent = `
-              .section,#leftPanel,#centerPanel,#gatePanel,#channelPanel,#workspace,#modeSection,#verticalGuideSection,#dataSection,
-              #gGrid,#gGuide,#grid,#guide,#handles,#centerline,#gCenterline,#controls,#bgfile,#showGrid,#snap,#snapStep,
-              #showGuide,#guideX,#magnet,#centerOnGuide,#save,#load,#loadSampleBtn { display:none !important; }
-              html,body,#svg { background:#fff !important; }
-            `;
-            doc.head.appendChild(hide);
-          }
-        }else{
-          // fallback: try again shortly (iframe might still be loading)
-          setTimeout(callApply, 120);
-        }
-      }catch(e){
-        setTimeout(callApply, 120);
-      }
-    };
-    if(frame.complete){
-      callApply();
-    }else{
-      frame.addEventListener("load", callApply, {once:true});
-    }
-
-  }catch(e){
-    console.error(e);
-    statusEl.textContent = "Error contacting API.";
-  }finally{
-    $("#genBtn").disabled = false;
-  }
-}
-
-document.getElementById("genBtn").addEventListener("click", handleGenerate);
-document.getElementById("detailsBtn").addEventListener("click", ()=>{
-  // details page will re-use sessionStorage
-  window.location.href = "details.html";
-});
-</script>
-</body>
-</html>
+      const resp = await fetch(url.toString(), {headers:{'Accept':'application/json','User-Agent':'DesigningUsChart/1.0 (contact: you@example.com)'}});
+      const rows = await resp.json();
+      placeList.innerHTML = '';
+      rows.forEach(r => {
+        // Prefer city/town/village
+        const a = r.a
