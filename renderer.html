@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bodygraph Renderer</title>
+<style>
+  html,body{margin:0;height:100%;background:#fff}
+  .wrap{display:flex;align-items:center;justify-content:center;min-height:100%;background:#fff}
+  svg{width:100%;max-width:720px;height:auto;display:block}
+  .center{fill:#fafafa;stroke:#1a2428;stroke-width:2}
+  .channel{fill:none;stroke:#6b7f86;stroke-linecap:round;opacity:.95}
+  .gate circle{fill:#dce2e4;stroke:none} /* no black borders */
+  .gate text{font:10px ui-sans-serif,system-ui;fill:#111;font-weight:600;dominant-baseline:middle;text-anchor:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <svg id="svg" viewBox="0 0 720 1080" preserveAspectRatio="xMidYMid meet">
+    <g id="centers"></g>
+    <g id="channels"></g>
+    <g id="gates"></g>
+  </svg>
+</div>
+<script>
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('svg');
+const gC=document.getElementById('centers');
+const gCh=document.getElementById('channels');
+const gG=document.getElementById('gates');
+
+function el(n,attrs,p){const e=document.createElementNS(NS,n);for(const[k,v]of Object.entries(attrs||{}))e.setAttribute(k,v);if(p)p.appendChild(e);return e}
+
+async function loadLayout(){
+  const r=await fetch('bodygraph-layout.json',{cache:'no-store'});
+  return r.json();
+}
+
+function drawCenters(centers){
+  gC.innerHTML='';
+  for(const c of centers){
+    let node;
+    if(c.type==='rect'){ node=el('rect',{x:c.x,y:c.y,width:c.w,height:c.h,rx:c.rx||18,ry:c.rx||18},gC); }
+    else if(c.type==='diamond'){ node=el('rect',{x:c.x,y:c.y,width:c.w,height:c.h,rx:20,ry:20},gC); }
+    else if(c.type==='tri'){
+      let pts='';
+      if(c.dir==='up') pts=`${c.x+c.w/2},${c.y} ${c.x+c.w},${c.y+c.h} ${c.x},${c.y+c.h}`;
+      else if(c.dir==='down') pts=`${c.x},${c.y} ${c.x+c.w},${c.y} ${c.x+c.w/2},${c.y+c.h}`;
+      else if(c.dir==='left') pts=`${c.x+c.w},${c.y} ${c.x+c.w},${c.y+c.h} ${c.x},${c.y+c.h/2}`;
+      else pts=`${c.x},${c.y} ${c.x+c.w},${c.y+c.h/2} ${c.x},${c.y+c.h}`;
+      node=el('polygon',{points:pts},gC);
+    } else { node=el('rect',{x:c.x,y:c.y,width:c.w,height:c.h,rx:10,ry:10},gC); }
+    node.setAttribute('class','center');
+    if(c.rot){ node.setAttribute('transform',`rotate(${c.rot} ${c.x+c.w/2} ${c.y+c.h/2})`); }
+  }
+}
+
+function Q(A,B,ctrl){ return `M ${A[0]},${A[1]} Q ${ctrl[0]},${ctrl[1]} ${B[0]},${B[1]}`; }
+
+function drawChannels(channels,gates,integr){
+  gCh.innerHTML='';
+  const straight = new Set(['61-24','24-33','31-7','7-25','25-2','5-15','34-20','9-52']);
+  const pathAttrs=(w)=>({class:'channel',stroke:'#7f8f92','stroke-width':w||8});
+
+  // Optional unified Integration spine if A/B provided
+  if(integr && integr.A && integr.B){
+    const A=integr.A, B=integr.B;
+    const mid=[(A[0]+B[0])/2,(A[1]+B[1])/2];
+    const ctrl=[integr.ctrlX ?? 360, mid[1]]; // keep spine near vertical centerline by default
+    el('path', Object.assign({d:Q(A,B,ctrl)}, pathAttrs(10)), gCh);
+  }
+
+  for(const [id,ch] of Object.entries(channels)){
+    const key=[ch.a,ch.b].sort().join('-');
+    const A=gates[ch.a], B=gates[ch.b]; if(!A||!B) continue;
+    let d='';
+    if(ch.style==='orth' || straight.has(key)){
+      const midY=(A[1]+B[1])/2;
+      d = `M ${A[0]},${A[1]} L ${A[0]},${midY} L ${B[0]},${midY} L ${B[0]},${B[1]}`;
+    }else{
+      const ctrl=ch.ctrl || [(A[0]+B[0])/2,(A[1]+B[1])/2];
+      d = Q(A,B,ctrl);
+    }
+    el('path', Object.assign({d}, pathAttrs(ch.w)), gCh);
+  }
+}
+
+function drawGates(gates,rad){
+  gG.innerHTML='';
+  const ids=Object.keys(gates).sort((a,b)=>+a-+b);
+  for(const id of ids){
+    const [x,y]=gates[id];
+    const r=rad[id]||12;
+    const g=el('g',{class:'gate','data-id':id}, gG);
+    el('circle',{cx:x,cy:y,r}, g);
+    el('text',{x, y, 'text-anchor':'middle', 'font-size':'10','font-weight':'600'}, g).textContent=id;
+  }
+}
+
+function readIntegrationConfig(){
+  try{
+    const conf = JSON.parse(localStorage.getItem('INTEGRATION_CONFIG')||'{}');
+    if(conf.A && conf.B) return conf;
+    // angleDeg support (optional): compute A/B on a vertical line with given angle relative control
+    if(typeof conf.angleDeg==='number'){
+      const cx=360; // centerline
+      // default y positions roughly between Gate 20 (throat) and Gate 57 (spleen) from common templates
+      const Ay=420, By=700;
+      const dxA = Math.tan((conf.angleDeg*Math.PI)/180) * 60;
+      const dxB = Math.tan((conf.angleDeg*Math.PI)/180) * 60;
+      return {A:[cx-dxA,Ay], B:[cx+dxB,By]};
+    }
+  }catch(e){}
+  return null;
+}
+
+// Public API: allow parent to forward data
+window.applyBodygraph = function(json){ /* reserved for future use */ };
+
+(async function(){
+  const layout = await loadLayout();
+  drawCenters(layout.centers||[]);
+  drawChannels(layout.channels||{}, layout.gates||{}, readIntegrationConfig());
+  drawGates(layout.gates||{}, layout.gateRadius||{});
+})();
+</script>
+</body>
+</html>

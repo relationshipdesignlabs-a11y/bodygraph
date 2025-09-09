@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Human Design — Start</title>
+<style>
+  :root{--bg:#0e1116;--card:#141a22;--ink:#e9eef2;--muted:#9fb0b8;--border:#233040;--accent:#2dd4bf}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:900px;margin:0 auto;padding:24px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  h1{margin:0 0 10px;font-size:22px}
+  label{display:block;margin:10px 0 6px;color:#cdd6db}
+  input,button{font:inherit}
+  input[type="text"],input[type="date"],input[type="time"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a3641;background:#0c1016;color:#eaf1f3}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .actions{margin-top:14px;display:flex;gap:10px;align-items:center}
+  button{padding:10px 14px;border-radius:10px;border:1px solid #2a3641;background:#0d1218;color:#eaf1f3;cursor:pointer}
+  button.primary{background:linear-gradient(180deg,#17b9be,#0891b2);border-color:#0e7e97}
+  .hint{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Get your free Human Design chart</h1>
+    <p class="hint">Enter your birth data and we’ll render your chart next.</p>
+    <label for="name">Your name</label>
+    <input id="name" type="text" placeholder="Jane Doe"/>
+    <div class="row">
+      <div>
+        <label for="date">Birth date</label>
+        <input id="date" type="date"/>
+      </div>
+      <div>
+        <label for="time">Birth time</label>
+        <input id="time" type="time"/>
+      </div>
+      <div>
+        <label for="place">Birth place (city, country)</label>
+        <input id="place" type="text" placeholder="Tampa, United States"/>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="go" class="primary">Show chart</button>
+      <span id="stat" class="hint"></span>
+    </div>
+  </div>
+</div>
+<script>
+document.getElementById('go').onclick=()=>{
+  const name=document.getElementById('name').value.trim();
+  const date=document.getElementById('date').value;
+  const time=document.getElementById('time').value||'12:00';
+  const place=document.getElementById('place').value.trim();
+  if(!name||!date||!place){document.getElementById('stat').textContent='Please fill name, date, and place.';return;}
+  const data={name,date,time,place};
+  sessionStorage.setItem('HD_META', JSON.stringify(data));
+  // NOTE: Hook your API fetch here if you want live chart data, then also save to HD_DATA.
+  location.href='chart.html';
+};
+</script>
+</body>
+</html>
