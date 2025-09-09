@@ -3,372 +3,118 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Chart Details</title>
+<title>Chart details</title>
 <style>
   :root{
-    --bg:#ffffff; --ink:#0a0f12; --muted:#7e8b91;
-    --cyan:#00d5ff;           /* Design color (centers + design channels) */
-    --person:#111111;         /* Personality color (channels + gate dots) */
-    --undef:#ffffff;          /* Undefined center/channel background */
-    --edge:#0a0f12;           /* Center perimeter */
-    --panel:#ffffff;
-    --shadow: 0 8px 36px rgba(0,0,0,.10);
+    --ring:#e1e6e8; --cyan:#00d5ff; --ink:#0a0f12;
   }
-  html,body{margin:0;height:100%;background:#fff;color:#111;font-family:ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:480px 1fr;gap:20px;align-items:start}
-  .frame{background:#fff;border:1px solid #e7ecee;border-radius:14px;padding:8px;box-shadow:var(--shadow)}
-  .canvas{display:flex;justify-content:center;align-items:center}
-  svg{width:100%;height:auto;background:#fff;user-select:none;touch-action:none}
-
-  .panel{background:#fff;border:1px solid #e7ecee;border-radius:14px;padding:14px;box-shadow:var(--shadow)}
-  h1{margin:0 0 8px;font-size:20px}
-  .muted{color:#6a787e;font-size:12px;margin-bottom:10px}
-  .list{list-style:none;margin:0;padding:0}
-  .list li{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed #e6ecef}
-  .list li:last-child{border-bottom:none}
-  .k{width:160px;color:#5a6a70;font-size:14px}
-  .v{flex:1;font-size:14px}
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{border:1px solid #d8e0e4;border-radius:999px;padding:4px 10px;font-size:12px;background:#fafcfd}
-
-  .center-shape{fill:var(--undef);stroke:var(--edge);stroke-width:2}
-  .defined-center{fill:var(--cyan)!important;stroke:var(--edge)!important}
-  .undefined-center{fill:var(--undef)!important;stroke:var(--edge)!important}
-  .gate circle{fill:var(--undef);stroke:none}
-  .gate text{fill:#111;font-size:10px;font-weight:600}
-  .gate-defined{fill:var(--person)!important;stroke:var(--person)!important}
-  .gate-text-invert{fill:#fff!important}
-  .base-outline{fill:none;stroke:#000;pointer-events:none}
-  .base-fill{fill:none;stroke:var(--undef);pointer-events:none}
-  .halfstroke{fill:none;stroke-linecap:round;opacity:1}
-  .candy rect{shape-rendering:crispEdges}
-  .center-edge-top{fill:none;stroke:var(--edge);pointer-events:none}
-  .center-open{pointer-events:none}
-  #ablayer, #ablayer .abHandle, #ablayer .abLabel { display:none!important; opacity:0!important; pointer-events:none!important; }
+  html,body{margin:0;height:100%;background:#fff;font-family: ui-sans-serif,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0a0f12}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px;display:grid;grid-template-columns: 1fr 320px; gap:16px}
+  .card{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:12px}
+  .frameWrap{border:1px solid var(--ring); border-radius:12px; overflow:hidden; background:#fff; height:70vh; display:flex}
+  #chartFrame{flex:1; border:0; width:100%; height:100%; background:#fff}
+  h1{margin:0 0 8px;font-size:18px}
+  .muted{color:#6b7a80;font-size:12px}
+  .list{display:grid; gap:8px; font-size:14px}
+  .row{display:grid; grid-template-columns: 130px 1fr; gap:8px; border-bottom:1px dashed #edf1f2; padding-bottom:6px}
+  .row:last-child{border-bottom:none}
+  .key{color:#516166}
+  .val{font-weight:700}
+  .actions{display:flex; gap:8px; margin-top:10px}
+  .btn{appearance:none;border:1px solid #cfd6d9;border-radius:10px;padding:10px 14px;background:#fff;cursor:pointer}
+  .btn:hover{border-color:#aab5b9}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="frame">
-    <div style="text-align:center;font-weight:600;margin:6px 0 2px" id="namebar"></div>
-    <div style="text-align:center;color:#6a787e;font-size:12px;margin-bottom:6px" id="utcbar"></div>
-    <div class="canvas">
-      <svg id="svg" viewBox="0 0 720 1080" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <mask id="clipCenters" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"></mask>
-          <mask id="maskSpineOutline" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse"></mask>
-          <pattern id="candyTemplate" patternUnits="userSpaceOnUse" width="12" height="12" class="candy">
-            <rect width="6" height="12" fill="#111"/>
-            <rect x="6" width="6" height="12" fill="#00d5ff"/>
-          </pattern>
-          <filter id="hl" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#8ad" flood-opacity=".6"/></filter>
-        </defs>
-        <g id="centers"></g>
-        <g id="channels"></g>
-        <g id="gates"></g>
-      </svg>
+  <div class="card">
+    <h1 id="title"></h1>
+    <div class="muted" id="utc"></div>
+    <div class="frameWrap">
+      <iframe id="chartFrame" src="WORKING.html#details" loading="eager"></iframe>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="history.back()">Back</button>
+      <a class="btn" href="./" style="text-decoration:none;display:inline-block">Home</a>
     </div>
   </div>
-  <div class="panel">
-    <h1>Chart basics</h1>
-    <div class="muted">Quick facts pulled from your chart.</div>
-    <ul class="list">
-      <li><div class="k">Aura type</div><div class="v" id="v-type">—</div></li>
-      <li><div class="k">Profile</div><div class="v" id="v-profile">—</div></li>
-      <li><div class="k">Strategy</div><div class="v" id="v-strategy">—</div></li>
-      <li><div class="k">Authority</div><div class="v" id="v-authority">—</div></li>
-      <li><div class="k">Incarnation cross</div><div class="v" id="v-cross">—</div></li>
-      <li><div class="k">Definition</div><div class="v" id="v-definition">—</div></li>
-      <li><div class="k">Signature</div><div class="v" id="v-signature">—</div></li>
-      <li><div class="k">Not-self theme</div><div class="v" id="v-notself">—</div></li>
-      <li><div class="k">Defined channels</div><div class="v"><div class="chips" id="v-channels"></div></div></li>
-    </ul>
+
+  <div class="card">
+    <h1>Basics</h1>
+    <div class="list" id="basics"></div>
   </div>
 </div>
 
 <script>
-/* Pull from sessionStorage */
-const raw = sessionStorage.getItem('hd_json');
-const name = sessionStorage.getItem('hd_name') || "";
-const utc  = sessionStorage.getItem('hd_utc') || "";
-if(!raw){
-  document.body.innerHTML = "<div style='padding:24px;font-family:ui-sans-serif'>No chart found. Go back and generate one first.</div>";
-}else{
-  try{
-    const json = JSON.parse(raw);
-    document.getElementById('namebar').textContent = name;
-    document.getElementById('utcbar').textContent  = utc ? (new Date(utc)).toUTCString() : "";
-    // Basics
-    const setText=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v||"—"; };
-    setText('v-type', json.type);
-    setText('v-profile', json.profile);
-    setText('v-strategy', json.strategy);
-    setText('v-authority', json.authority);
-    setText('v-cross', json.incarnation_cross || "");
-    setText('v-definition', json.definition);
-    setText('v-signature', json.signature);
-    setText('v-notself', json.not_self_theme);
+const $ = s => document.querySelector(s);
+const pad2 = n => String(n).padStart(2,'0');
 
-    const chips = document.getElementById('v-channels');
-    (json.channels_short||[]).forEach(ch=>{
-      const d=document.createElement('div'); d.className='chip'; d.textContent=ch; chips.appendChild(d);
-    });
-
-    // Render bodygraph (same renderer as index, trimmed)
-    const NS="http://www.w3.org/2000/svg";
-    const svg = document.getElementById('svg');
-    const gCenters = document.getElementById('centers');
-    const gChannels = document.getElementById('channels');
-    const gGates = document.getElementById('gates');
-
-    const USER_MAP = 
-{"centers": [{"id": "Head", "type": "tri", "x": 295, "y": 72.31007385253906, "w": 130, "h": 110, "rot": 0, "dir": "up"}, {"id": "Ajna", "type": "tri", "x": 295, "y": 200, "w": 130, "h": 110, "rot": 0, "dir": "down"}, {"id": "Throat", "type": "rect", "x": 300, "y": 325.3846130371094, "w": 120, "h": 120, "rot": 0, "rx": 18}, {"id": "G", "type": "diamond", "x": 295, "y": 485.552734375, "w": 130, "h": 130, "rot": 45}, {"id": "Ego", "type": "tri", "x": 450.1537780761719, "y": 596.6154174804688, "w": 90, "h": 80, "rot": 152, "dir": "right"}, {"id": "Spleen", "type": "tri", "x": 81.38460540771484, "y": 661.6923217773438, "w": 120, "h": 130, "rot": 180, "dir": "left"}, {"id": "Solar", "type": "tri", "x": 524.7692260742188, "y": 659.0769653320312, "w": 120, "h": 130, "rot": 180, "dir": "right"}, {"id": "Sacral", "type": "rect", "x": 300, "y": 690.4544067382812, "w": 120, "h": 120, "rot": 0, "rx": 18}, {"id": "Root", "type": "rect", "x": 300, "y": 834.3428955078125, "w": 120, "h": 120, "rot": 0, "rx": 18}], "gates": {"1": [360, 481.23394775390625], "2": [360, 621.90234375], "3": [360, 796.8123168945312], "4": [399.69232177734375, 215.07691955566406], "5": [324.8329162597656, 705.1928100585938], "6": [552.923095703125, 723.6923217773438], "7": [323.9074401855469, 513.6246948242188], "8": [360, 432.1850891113281], "9": [392.3907470703125, 795.8869018554688], "10": [289.6658020019531, 550.6427001953125], "11": [385.91259765625, 239.69151306152344], "12": [407.19793701171875, 378.5090026855469], "13": [397.9434509277344, 515.4755859375], "14": [360, 705.1928100585938], "15": [324.8329162597656, 588.5861206054688], "16": [313.7275085449219, 354.4472961425781], "17": [334.08740234375, 240.616973877], "18": [94.15384674072266, 768.923095703125], "19": [407.19793701171875, 876.4010009765625], "20": [312.80206298828125, 382.2107849121094], "21": [514.1538696289062, 605.5384521484375], "22": [605.5384521484375, 696], "23": [360, 338.71466064453125], "24": [360, 215.07691955566406], "25": [430.3341979980469, 548.791748046875], "26": [480.9230651855469, 643.3846435546875], "27": [313.7275085449219, 772.7506713867188], "28": [120.92308044433594, 756], "29": [396.0925598144531, 705.1928100585938], "30": [631.3846435546875, 767.076904296875], "31": [323.9074401855469, 432.1850891113281], "32": [146.76922607421875, 742.1538696289062], "33": [397.8461608886719, 431.0769348144531], "34": [313.7275085449219, 732.956298828125], "35": [408.1233825683594, 349.8200378417969], "36": [632.3076782226562, 681.2307739257812], "37": [579.6923217773438, 708], "38": [313.7275085449219, 905.0899658203125], "39": [407.19793701171875, 906.0154418945312], "40": [532.6153564453125, 639.6923217773438], "41": [407.19793701171875, 936.5552978515625], "42": [328.5346984863281, 796.8123168945312], "43": [360, 283.1876525878906], "44": [146.22108459472656, 711.6709594726562], "45": [407.19793701171875, 406.2724914550781], "46": [396.0925598144531, 586.7352294921875], "47": [320.30767822265625, 214.15383911132812], "48": [94.15384674072266, 684], "49": [576.923095703125, 738.4615478515625], "50": [173.0591278076172, 727.4036254882812], "51": [497.5384521484375, 624.923095703125], "52": [392.3907470703125, 849.56298828125], "53": [328.5346984863281, 849.56298828125], "54": [313.7275085449219, 873.6246948242188], "55": [603.6923217773438, 752.3076782226562], "56": [385.91259765625, 337.7892150878906], "57": [119.07691955566406, 697.8461303710938], "58": [313.7275085449219, 937.480712890625], "59": [407.19793701171875, 771.8251953125], "60": [360, 849.56298828125], "61": [360, 167.07691955566406], "62": [334.08740234375, 338.71466064453125], "63": [399.69232177734375, 167.07691955566406], "64": [320.30767822265625, 167.07691955566406]}, "gateRadius": {"1": 12, "2": 12, "3": 12, "4": 12, "5": 12, "6": 12, "7": 12, "8": 12, "9": 12, "10": 12, "11": 12, "12": 12, "13": 12, "14": 12, "15": 12, "16": 12, "17": 12, "18": 12, "19": 12, "20": 12, "21": 12, "22": 12, "23": 12, "24": 12, "25": 12, "26": 12, "27": 12, "28": 12, "29": 12, "30": 12, "31": 12, "32": 12, "33": 12, "34": 12, "35": 12, "36": 12, "37": 12, "38": 12, "39": 12, "40": 12, "41": 12, "42": 12, "43": 12, "44": 12, "45": 12, "46": 12, "47": 12, "48": 12, "49": 12, "50": 12, "51": 12, "52": 12, "53": 12, "54": 12, "55": 12, "56": 12, "57": 12, "58": 12, "59": 12, "60": 12, "61": 12, "62": 12, "63": 12, "64": 12}, "channels": {"1-8": {"a": "1", "b": "8", "style": "orth", "w": 8, "ctrl": [380, 482.5]}, "14-2": {"a": "2", "b": "14", "style": "orth", "w": 8, "ctrl": [390, 710]}, "3-60": {"a": "3", "b": "60", "style": "orth", "w": 8, "ctrl": [210, 525]}, "4-63": {"a": "4", "b": "63", "style": "orth", "w": 8, "ctrl": [400, 205]}, "15-5": {"a": "5", "b": "15", "style": "orth", "w": 8, "ctrl": [370, 657.5]}, "6-59": {"a": "6", "b": "59", "style": "curve", "w": 8, "ctrl": [489.23077392578125, 744.923095703125]}, "31-7": {"a": "7", "b": "31", "style": "orth", "w": 8, "ctrl": [360, 505]}, "52-9": {"a": "9", "b": "52", "style": "orth", "w": 8, "ctrl": [340, 862.5]}, "10-20": {"a": "10", "b": "20", "style": "curve", "w": 8, "ctrl": [182.76922607421875, 524.3076782226562]}, "10-34": {"a": "10", "b": "34", "style": "curve", "w": 8, "ctrl": [77.53845977783203, 531.6923217773438]}, "10-57": {"a": "10", "b": "57", "style": "curve", "w": 8, "ctrl": [187.38461303710938, 507.69232177734375]}, "11-56": {"a": "11", "b": "56", "style": "orth", "w": 8, "ctrl": [390, 332.5]}, "12-22": {"a": "12", "b": "22", "style": "curve", "w": 8, "ctrl": [535.5269775390625, 531.8155517578125]}, "13-33": {"a": "13", "b": "33", "style": "orth", "w": 8, "ctrl": [340, 470]}, "16-48": {"a": "16", "b": "48", "style": "curve", "w": 8, "ctrl": [175.38461303710938, 496.6153869628906]}, "17-62": {"a": "17", "b": "62", "style": "orth", "w": 8, "ctrl": [315, 320]}, "18-58": {"a": "18", "b": "58", "style": "curve", "w": 8, "ctrl": [183.6923065185547, 887.076904296875]}, "19-49": {"a": "19", "b": "49", "style": "curve", "w": 8, "ctrl": [518.8688354492188, 827.0340576171875]}, "20-34": {"a": "20", "b": "34", "style": "curve", "w": 8, "ctrl": [136.0411376953125, 558.9717407226562]}, "20-57": {"a": "20", "b": "57", "style": "curve", "w": 8, "ctrl": [175.38461303710938, 546.4615478515625]}, "21-45": {"a": "21", "b": "45", "style": "curve", "w": 8, "ctrl": [487.403564453125, 528.11376953125]}, "23-43": {"a": "23", "b": "43", "style": "orth", "w": 8, "ctrl": [345, 332.5]}, "24-61": {"a": "24", "b": "61", "style": "orth", "w": 8, "ctrl": [360, 220]}, "25-51": {"a": "25", "b": "51", "style": "curve", "w": 9, "ctrl": [462.4615478515625, 576.923095703125]}, "26-44": {"a": "26", "b": "44", "style": "curve", "w": 8, "ctrl": [259.3846130371094, 654.4615478515625]}, "27-50": {"a": "27", "b": "50", "style": "curve", "w": 8, "ctrl": [270, 757.5]}, "28-38": {"a": "28", "b": "38", "style": "curve", "w": 8, "ctrl": [198.46153259277344, 854.7692260742188]}, "29-46": {"a": "29", "b": "46", "style": "orth", "w": 8, "ctrl": [380, 690]}, "32-54": {"a": "32", "b": "54", "style": "curve", "w": 8, "ctrl": [215.07691955566406, 834.4615478515625]}, "34-57": {"a": "34", "b": "57", "style": "curve", "w": 8, "ctrl": [156.92308044433594, 568.6153564453125]}, "35-36": {"a": "35", "b": "36", "style": "curve", "w": 8, "ctrl": [536.452392578125, 480.9158020019531]}, "37-40": {"a": "37", "b": "40", "style": "curve", "w": 8, "ctrl": [563.2904663085938, 667.856689453125]}, "39-55": {"a": "39", "b": "55", "style": "curve", "w": 8, "ctrl": [535.5269775390625, 850.1702880859375]}, "41-30": {"a": "41", "b": "30", "style": "curve", "w": 8, "ctrl": [561.2307739257812, 870.4615478515625]}, "42-53": {"a": "42", "b": "53", "style": "orth", "w": 8, "ctrl": [380, 887.5]}, "47-64": {"a": "47", "b": "64", "style": "orth", "w": 8, "ctrl": [320, 205]}}}
-;
-
-    function el(n, attrs={}, parent){ const e=document.createElementNS(NS,n); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
-    function centerPath(c){
-      const {type,x,y,w,h,rot=0,rx=18,dir='up'} = c;
-      if(type==='rect') return el('rect',{x,y,width:w,height:h,rx,ry:rx,transform:`rotate(${rot} ${x+w/2} ${y+h/2})`});
-      if(type==='diamond'){ const cx=x+w/2, cy=y+h/2; return el('rect',{x,y,width:w,height:h,rx:20,ry:20,transform:`rotate(${rot} ${cx} ${cy})`}); }
-      if(type==='tri'){
-        let pts; if(dir==='up') pts=`${x+w/2},${y} ${x+w},${y+h} ${x},${y+h}`;
-        else if(dir==='down') pts=`${x},${y} ${x+w},${y} ${x+w/2},${y+h}`;
-        else if(dir==='left') pts=`${x+w},${y} ${x+w},${y+h} ${x},${y+h/2}`;
-        else pts=`${x},${y} ${x+w},${y+h/2} ${x},${y+h}`;
-        return el('polygon',{points:pts,transform:`rotate(${rot} ${x+w/2} ${y+h/2})`});
-      }
-      return el('rect',{x,y,width:w,height:h,rx:10,ry:10});
-    }
-    function drawCenters(){
-      gCenters.innerHTML='';
-      USER_MAP.centers.forEach(c=>{
-        const node=centerPath(c);
-        node.classList.add('center-shape');
-        node.dataset.id=c.id;
-        gCenters.appendChild(node);
-      });
-    }
-    const GATE_TO_CENTER={'64':'Head','61':'Head','63':'Head','47':'Ajna','24':'Ajna','4':'Ajna','62':'Throat','23':'Throat','56':'Throat','35':'Throat','12':'Throat','45':'Throat','33':'Throat','31':'Throat','8':'Throat','20':'Throat','16':'Throat','1':'G','2':'G','7':'G','13':'G','10':'G','15':'G','25':'G','46':'G','21':'Ego','51':'Ego','26':'Ego','40':'Ego','48':'Spleen','57':'Spleen','44':'Spleen','50':'Spleen','32':'Spleen','28':'Spleen','18':'Spleen','55':'Solar','36':'Solar','22':'Solar','37':'Solar','6':'Solar','49':'Solar','30':'Solar','34':'Sacral','5':'Sacral','14':'Sacral','29':'Sacral','59':'Sacral','27':'Sacral','9':'Sacral','3':'Sacral','42':'Sacral','58':'Root','38':'Root','54':'Root','53':'Root','60':'Root','52':'Root','19':'Root','39':'Root','41':'Root'};
-    function drawGates(){
-      gGates.innerHTML='';
-      const ids=Object.keys(USER_MAP.gates).sort((a,b)=>+a-+b);
-      ids.forEach(id=>{
-        const [x,y]=USER_MAP.gates[id];
-        const r=USER_MAP.gateRadius[id]||12;
-        const g = el('g',{'class':'gate','data-id':id}, gGates);
-        el('circle',{cx:x,cy:y,r,fill:'var(--undef)',stroke:'none'}, g);
-        el('text',{x, y:y+4, 'text-anchor':'middle','font-size':'10','font-weight':'600', fill:'#111'}, g).textContent=id;
-      });
-    }
-    function Q(A,C,B,t){ const u=1-t; return [u*u*A[0]+2*u*t*C[0]+t*t*B[0], u*u*A[1]+2*u*t*C[1]+t*t*B[1]]; }
-    function sampleQuad(A,C,B,N=160){ const pts=[]; for(let i=0;i<=N;i++){ const t=i/N; pts.push(Q(A,C,B,t)); } return pts; }
-    function sampleOrth(A,B){ const pts=[]; const midY=(A[1]+B[1])/2; const s=40;
-      for(let i=0;i<=s;i++) pts.push([A[0], A[1] + (i/s)*(midY-A[1])]);
-      for(let i=1;i<=s;i++) pts.push([A[0] + (i/s)*(B[0]-A[0]), midY]);
-      for(let i=1;i<=s;i++) pts.push([B[0], midY + (i/s)*(B[1]-midY)]);
-      return pts;
-    }
-    function pathD(pts){ if(!pts.length) return ''; let d=`M ${pts[0][0]},${pts[0][1]}`; for(let i=1;i<pts.length;i++) d+=` L ${pts[i][0]},${pts[i][1]}`; return d; }
-    function pathAngle(pts){ const a=pts[0], b=pts[pts.length-1]; return Math.atan2(b[1]-a[1], b[0]-a[0])*180/Math.PI; }
-    function midPoint(pts){ let sx=0,sy=0; for(const p of pts){ sx+=p[0]; sy+=p[1]; } return [sx/pts.length, sy/pts.length]; }
-    function halfSegments(pts){ const L=[0]; for(let i=1;i<pts.length;i++){ const dx=pts[i][0]-pts[i-1][0], dy=pts[i][1]-pts[i-1][1]; L[i]=L[i-1]+Math.hypot(dx,dy); }
-      const total=L[L.length-1], mid=total/2; let k=1; while(k<L.length && L[k]<mid) k++;
-      const t=(mid-L[k-1])/Math.max(1e-6,(L[k]-L[k-1])); const mx=pts[k-1][0]+t*(pts[k][0]-pts[k-1][0]); const my=pts[k-1][1]+t*(pts[k][1]-pts[k-1][1]);
-      const M=[mx,my]; const left=pts.slice(0,k); left.push(M); const right=[M, ...pts.slice(k)]; return [left,right];
-    }
-    let candyN=0;
-    function svgMidX(){ const vb=(svg.getAttribute('viewBox')||'0 0 720 1080').split(/\s+/).map(parseFloat); return vb[0]+vb[2]/2; }
-    function candyFor(pts){
-      const deg=pathAngle(pts), m=midPoint(pts); let rot=deg+45; if(m[0]>svgMidX()) rot=180-rot;
-      const defs=svg.querySelector('defs'); const tpl=document.getElementById('candyTemplate'); if(!defs||!tpl) return 'url(#candyTemplate)';
-      const id=`candy-${++candyN}`; const pat=tpl.cloneNode(true); pat.id=id; pat.setAttribute('patternTransform',`rotate(${rot})`); defs.appendChild(pat); return `url(#${id})`;
-    }
-    function drawStroke(pts, style, width){
-      if(!pts || pts.length<2) return;
-      const p=el('path',{'class':'halfstroke','stroke-width':String(width||8),'d':pathD(pts),'stroke-linecap':'round','mask':'url(#clipCenters)'}, gChannels);
-      if(style && style.type==='pattern') p.setAttribute('stroke', style.value);
-      else p.setAttribute('stroke', style || '#000');
-    }
-    function ensureChannelMask(){
-      const mask=document.getElementById('clipCenters'); while(mask.firstChild) mask.removeChild(mask.firstChild);
-      const vb=(svg.getAttribute('viewBox')||'0 0 720 1080').split(/\s+/).map(parseFloat);
-      el('rect',{x:vb[0],y:vb[1],width:vb[2],height:vb[3],fill:'white'}, mask);
-      gCenters.querySelectorAll('.center-shape').forEach(s=>{
-        const c=s.cloneNode(true); c.removeAttribute('class'); c.setAttribute('fill','black'); c.setAttribute('stroke','none'); mask.appendChild(c);
-      });
-    }
-    function paintChannelBaseOutlined(){
-      ensureChannelMask();
-      gChannels.querySelectorAll('.base-outline,.base-fill').forEach(n=>n.remove());
-      Object.entries(USER_MAP.channels).forEach(([id,ch])=>{
-        const A=USER_MAP.gates[ch.a], B=USER_MAP.gates[ch.b]; if(!A||!B) return;
-        const d = (ch.style==='curve') ? pathD(sampleQuad(A, ch.ctrl || [(A[0]+B[0])/2,(A[1]+B[1])/2], B, 64))
-                                       : pathD(sampleOrth(A,B));
-        const w=ch.w||8;
-        el('path',{'data-id':id,'class':'base-outline','stroke-width':String(w+2),'d':d,'mask':'url(#clipCenters)'}, gChannels);
-        el('path',{'data-id':id,'class':'base-fill','stroke-width':String(w),'d':d,'mask':'url(#clipCenters)'}, gChannels);
-      });
-    }
-    const CENTER_NAME_MAP = {"Head":"Head","Ajna":"Ajna","Throat":"Throat","G":"G","Ego":"Ego","Heart":"Ego","Spleen":"Spleen","Solar Plexus":"Solar","Solar Plexus Center":"Solar","Sacral":"Sacral","Root":"Root"};
-    function gnum(v){ return String(v).split('.')[0]; }
-    function parseApi(json){
-      const centersDefined = new Set((json.centers||[]).map(n=>CENTER_NAME_MAP[n]||n));
-      const D=new Set(), P=new Set();
-      const d=json.activations?.design||{}, p=json.activations?.personality||{};
-      Object.values(d).forEach(v=>{ if(v) D.add(gnum(v)); });
-      Object.values(p).forEach(v=>{ if(v) P.add(gnum(v)); });
-      const channels=new Set(); (json.channels_short||[]).forEach(s=>{ const [a,b]=String(s).split('-'); if(a&&b) channels.add([a,b].sort().join('-')); });
-      return {centersDefined,D,P,channels};
-    }
-    function paintCenters(centersDefined){
-      drawCenters();
-      gCenters.querySelectorAll('.center-shape').forEach(node=>{
-        const id=node.dataset.id;
-        if(centersDefined.has(id)){ node.classList.add('defined-center'); node.classList.remove('undefined-center'); }
-        else{ node.classList.add('undefined-center'); node.classList.remove('defined-center'); }
-      });
-      setTimeout(()=>edgeOverlayAndOpeners(),0);
-    }
-    function edgeOverlayAndOpeners(){
-      const oldTop=document.getElementById('gCenterEdgeTop'); if(oldTop) oldTop.remove();
-      const oldOpen=document.getElementById('gCenterOpeners'); if(oldOpen) oldOpen.remove();
-      const edge=el('g',{id:'gCenterEdgeTop'}, gCenters);
-      gCenters.querySelectorAll('.center-shape').forEach(s=>{
-        const c=s.cloneNode(true); c.setAttribute('class','center-edge-top'); c.setAttribute('fill','none');
-        const sw=s.getAttribute('stroke-width')||'2'; c.setAttribute('stroke-width',sw); edge.appendChild(c);
-      });
-      const openers=el('g',{id:'gCenterOpeners'}, gCenters);
-      gGates.querySelectorAll('.gate').forEach(elm=>{
-        const id=elm.getAttribute('data-id');
-        const circle=elm.querySelector('circle'); const t=elm.querySelector('text'); if(!circle||!t) return;
-        const centerId=GATE_TO_CENTER[id]; if(!centerId) return;
-        const isActive = circle.classList.contains('gate-defined');
-        if(!isActive) return;
-        const cx=parseFloat(circle.getAttribute('cx')); const cy=parseFloat(circle.getAttribute('cy')); const r=parseFloat(circle.getAttribute('r'))||12;
-        let sw=2; const refCenter=gCenters.querySelector(`.center-shape[data-id="${centerId}"]`); if(refCenter) sw=parseFloat(refCenter.getAttribute('stroke-width')||'2');
-        const ropen = r + Math.max(2, sw*0.75);
-        const color = getComputedStyle(document.documentElement).getPropertyValue('--undef').trim() || '#fff';
-        el('circle',{cx,cy,r:ropen,fill:color,stroke:'none','class':'center-open'}, openers);
-      });
-    }
-    function drawGatesStyled(D,P,centersDefined){
-      drawGates();
-      gGates.querySelectorAll('.gate').forEach(g=>{
-        const id=g.getAttribute('data-id');
-        const circles=g.querySelectorAll('circle'); const text=g.querySelector('text'); if(!circles.length) return;
-        const centerId=GATE_TO_CENTER[id]||null; const centerDefined=centerId ? centersDefined.has(centerId) : false;
-        const isDefined = D.has(id) || P.has(id);
-        const c=circles[0]; for(let i=1;i<circles.length;i++){ circles[i].setAttribute('opacity','0'); circles[i].setAttribute('stroke','none'); }
-        c.setAttribute('opacity','1');
-        if(!centerDefined){
-          if(isDefined){ c.classList.add('gate-defined'); c.setAttribute('fill','#111'); c.setAttribute('stroke','#111'); text.classList.add('gate-text-invert'); }
-          else{ c.setAttribute('fill','var(--undef)'); c.setAttribute('stroke','none'); text.setAttribute('fill','#111'); }
-          return;
-        }
-        if(isDefined){ c.classList.add('gate-defined'); c.setAttribute('fill','#111'); c.setAttribute('stroke','#111'); text.classList.add('gate-text-invert'); }
-        else{ c.setAttribute('fill','var(--undef)'); c.setAttribute('stroke','none'); text.setAttribute('fill','#111'); }
-      });
-    }
-    function styleForGate(g,D,P,pts){
-      const d=D.has(String(g)), p=P.has(String(g));
-      if(d && p) return {type:'pattern', value: candyFor(pts)};
-      if(d) return getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim() || '#00d5ff';
-      if(p) return '#111';
-      return null;
-    }
-    function paintNonIntegrationHalves(D,P){
-      paintChannelBaseOutlined();
-      const integ=new Set(['10-20','20-10','10-34','34-10','10-57','57-10','34-57','57-34','20-34','34-20','20-57','57-20']);
-      Object.entries(USER_MAP.channels).forEach(([id,ch])=>{
-        if(integ.has(id)) return;
-        const A=USER_MAP.gates[ch.a], B=USER_MAP.gates[ch.b]; if(!A||!B) return;
-        const pts = (ch.style==='curve') ? sampleQuad(A, ch.ctrl || [(A[0]+B[0])/2,(A[1]+B[1])/2], B, 120)
-                                         : sampleOrth(A,B);
-        const [segA,segB]=halfSegments(pts); const w=ch.w||8;
-        const sA=styleForGate(ch.a,D,P,segA); if(sA) drawStroke(segA,sA,w);
-        const sB=styleForGate(ch.b,D,P,segB); if(sB) drawStroke(segB,sB,w);
-      });
-    }
-    function getAB(){
-      const ch=USER_MAP.channels[ ['20','57'].sort().join('-') ]; if(!ch) return null;
-      const P20=USER_MAP.gates[ch.a], P57=USER_MAP.gates[ch.b];
-      const C=ch.ctrl || [(P20[0]+P57[0])/2,(P20[1]+P57[1])/2];
-      const tA=2/3, tB=1/3;
-      const A=Q(P20,C,P57,tA), B=Q(P20,C,P57,tB);
-      return {A,B,P20,P57,C};
-    }
-    function spine(t1,t2,N=120){
-      const AB=getAB(); if(!AB) return [];
-      const {P20,P57,C}=AB; const pts=[]; const steps=Math.max(2,Math.round(N*Math.abs(t2-t1)));
-      for(let i=0;i<=steps;i++){ const t=t1+(i/steps)*(t2-t1); pts.push(Q(P20,C,P57,t)); } return pts;
-    }
-    function paintIntegration(D,P){
-      const AB=getAB(); if(!AB) return;
-      const {A,B}=AB; const P10=USER_MAP.gates['10'], P34=USER_MAP.gates['34'];
-      const w=8; const has=(a,b)=> !!USER_MAP.channels[[String(a),String(b)].sort().join('-')];
-      if(has(20,34)){ const seg1=spine(0.0, 1/3, 80); const s1=styleForGate(20,D,P,seg1); if(s1) drawStroke(seg1,s1,w);
-                      if(P34){ const seg2=[A,P34]; const s2=styleForGate(34,D,P,seg2); if(s2) drawStroke(seg2,s2,w); } }
-      if(has(10,20) && P10){ const seg1=[P10,B]; const s1=styleForGate(10,D,P,seg1); if(s1) drawStroke(seg1,s1,w);
-                              const seg2=spine(0.0, 1/3, 80); const s2=styleForGate(20,D,P,seg2); if(s2) drawStroke(seg2,s2,w); }
-      if(has(57,34)){ const seg1=spine(1.0, 2/3, 80); const s1=styleForGate(57,D,P,seg1); if(s1) drawStroke(seg1,s1,w);
-                      if(P34){ const seg2=[A,P34]; const s2=styleForGate(34,D,P,seg2); if(s2) drawStroke(seg2,s2,w); } }
-      if(has(10,57) && P10){ const seg1=[P10,B]; const s1=styleForGate(10,D,P,seg1); if(s1) drawStroke(seg1,s1,w);
-                              const seg2=spine(2/3, 1.0, 100); const s2=styleForGate(57,D,P,seg2); if(s2) drawStroke(seg2,s2,w); }
-      if(has(20,57)){ const full=spine(0.0,1.0,200); const [left,right]=halfSegments(full);
-                      const sL=styleForGate(20,D,P,left); if(sL) drawStroke(left,sL,w);
-                      const sR=styleForGate(57,D,P,right); if(sR) drawStroke(right,sR,w); }
-
-      const mask=document.getElementById('maskSpineOutline'); while(mask.firstChild) mask.removeChild(mask.firstChild);
-      const vb=(svg.getAttribute('viewBox')||'0 0 720 1080').split(/\s+/).map(parseFloat);
-      el('rect',{x:vb[0],y:vb[1],width:vb[2],height:vb[3],fill:'white'}, mask);
-      gCenters.querySelectorAll('.center-shape').forEach(s=>{
-        const c=s.cloneNode(true); c.removeAttribute('class'); c.setAttribute('fill','black'); c.setAttribute('stroke','none'); mask.appendChild(c);
-      });
-      function disk(p,r){ const c=el('circle',{cx:p[0],cy:p[1],r,fill:'black',stroke:'none'}); mask.appendChild(c); }
-      const ABp=getAB(); const outlineW=10; if(ABp){ disk(ABp.A,outlineW/2+1.5); disk(ABp.B,outlineW/2+1.5); }
-    }
-    function applyBodygraph(json){
-      const {centersDefined,D,P} = parseApi(json);
-      drawCenters(); drawGates();
-      (function paintCentersLocal(){
-        gCenters.querySelectorAll('.center-shape').forEach(n=>n.remove()); drawCenters();
-        gCenters.querySelectorAll('.center-shape').forEach(node=>{
-          const id=node.dataset.id;
-          if(centersDefined.has(id)){ node.classList.add('defined-center'); node.classList.remove('undefined-center'); }
-          else{ node.classList.add('undefined-center'); node.classList.remove('defined-center'); }
-        });
-        setTimeout(()=>edgeOverlayAndOpeners(),0);
-      })();
-      drawGatesStyled(D,P,centersDefined);
-      gChannels.innerHTML='';
-      paintChannelBaseOutlined();
-      (function paintNonIntegrationHalvesLocal(){
-        const integ=new Set(['10-20','20-10','10-34','34-10','10-57','57-10','34-57','57-34','20-34','34-20','20-57','57-20']);
-        Object.entries(USER_MAP.channels).forEach(([id,ch])=>{
-          if(integ.has(id)) return;
-          const A=USER_MAP.gates[ch.a], B=USER_MAP.gates[ch.b]; if(!A||!B) return;
-          const pts = (ch.style==='curve') ? sampleQuad(A, ch.ctrl || [(A[0]+B[0])/2,(A[1]+B[1])/2], B, 120)
-                                           : sampleOrth(A,B);
-          const [segA,segB]=halfSegments(pts); const w=ch.w||8;
-          const sA=(D.has(String(ch.a)) && P.has(String(ch.a))) ? {type:'pattern', value: candyFor(segA)} :
-                   (D.has(String(ch.a)) ? (getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim()||'#00d5ff') :
-                   (P.has(String(ch.a)) ? '#111' : null));
-          if(sA) drawStroke(segA,sA,w);
-          const sB=(D.has(String(ch.b)) && P.has(String(ch.b))) ? {type:'pattern', value: candyFor(segB)} :
-                   (D.has(String(ch.b)) ? (getComputedStyle(document.documentElement).getPropertyValue('--cyan').trim()||'#00d5ff') :
-                   (P.has(String(ch.b)) ? '#111' : null));
-          if(sB) drawStroke(segB,sB,w);
-        });
-      })();
-      paintIntegration(D,P);
-      return true;
-    }
-
-    applyBodygraph(json);
-  }catch(e){
-    document.body.innerHTML = "<div style='padding:24px;font-family:ui-sans-serif'>Couldn't parse saved chart. Please go back and regenerate.</div>";
+function putBasics(json){
+  const rows = [
+    ["Aura Type", json.type],
+    ["Profile", json.profile],
+    ["Strategy", json.strategy],
+    ["Authority", json.authority],
+    ["Incarnation Cross", json.incarnation_cross],
+    ["Defined Channels", (json.channels_long && json.channels_long.length) ? json.channels_long.join(", ") : (json.channels_short || []).join(", ")],
+    ["Definition", json.definition],
+    ["Signature", json.signature],
+    ["Not-self theme", json.not_self_theme]
+  ];
+  const list = $("#basics"); list.innerHTML = "";
+  for(const [k,v] of rows){
+    const row = document.createElement("div"); row.className="row";
+    const key = document.createElement("div"); key.className="key"; key.textContent=k;
+    const val = document.createElement("div"); val.className="val"; val.textContent = v || "—";
+    row.appendChild(key); row.appendChild(val);
+    list.appendChild(row);
   }
 }
+
+(function init(){
+  const raw = sessionStorage.getItem("HD_BODYGRAPH_JSON");
+  const name = sessionStorage.getItem("HD_NAME") || "";
+  if(!raw){
+    $("#title").textContent = name || "Your chart";
+    $("#basics").innerHTML = "<div class='row'><div class='key'>Note</div><div class='val'>No chart data in session — return to Home and generate again.</div></div>";
+    return;
+  }
+  const json = JSON.parse(raw);
+  $("#title").textContent = name || "Your chart";
+
+  const utc = json.birth_date_UTC ? new Date(json.birth_date_UTC) : null;
+  $("#utc").textContent = utc ? `UTC: ${utc.getUTCFullYear()}-${pad2(utc.getUTCMonth()+1)}-${pad2(utc.getUTCDate())} ${pad2(utc.getUTCHours())}:${pad2(utc.getUTCMinutes())}` : "";
+
+  // Render the same filled chart inside the iframe
+  const frame = document.getElementById("chartFrame");
+  const callApply = ()=>{
+    try{
+      if(frame.contentWindow && typeof frame.contentWindow.applyBodygraph === "function"){
+        frame.contentWindow.applyBodygraph(json);
+        // Hide any editor UI inside iframe
+        const doc = frame.contentDocument;
+        if(doc){
+          const hide = doc.createElement("style");
+          hide.textContent = `
+            .section,#leftPanel,#centerPanel,#gatePanel,#channelPanel,#workspace,#modeSection,#verticalGuideSection,#dataSection,
+            #gGrid,#gGuide,#grid,#guide,#handles,#centerline,#gCenterline,#controls,#bgfile,#showGrid,#snap,#snapStep,
+            #showGuide,#guideX,#magnet,#centerOnGuide,#save,#load,#loadSampleBtn { display:none !important; }
+            html,body,#svg { background:#fff !important; }
+          `;
+          doc.head.appendChild(hide);
+        }
+      }else{
+        setTimeout(callApply, 120);
+      }
+    }catch(e){
+      setTimeout(callApply, 120);
+    }
+  };
+  if(frame.complete){ callApply(); }
+  else{ frame.addEventListener("load", callApply, {once:true}); }
+
+  putBasics(json);
+})();
 </script>
 </body>
 </html>
