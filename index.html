@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Free Human Design Chart | Designing Us</title>
+<style>
+  :root{
+    --bg:#0e1116; --card:#151924; --ink:#e9eef0; --muted:#a8b5bb; --accent:#00d5ff;
+    --border:#202a34;
+  }
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  h1{margin:0 0 8px;font-size:20px}
+  h2{margin:0 0 10px;font-size:16px;color:#cdd7db}
+  label{display:block;margin:8px 0 4px;color:#c0cbd0}
+  input,button{font:inherit}
+  input[type="text"],input[type="time"],input[type="date"]{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a3641;background:#0c1016;color:#eaf1f3
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .actions{margin-top:12px;display:flex;gap:10px;align-items:center}
+  button{
+    padding:10px 14px;border-radius:10px;border:1px solid #2a3641;background:#0c1117;color:#eaf1f3;cursor:pointer
+  }
+  button.primary{background:linear-gradient(180deg,#10b8d7,#009cc2);border-color:#1188a1}
+  .hint{color:var(--muted);font-size:12px}
+  .hidden{display:none !important}
+  .chartLayout{display:grid;grid-template-columns: 1fr minmax(560px, 720px) 1fr;gap:16px;align-items:start}
+  .col{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px}
+  .colTitle{margin:4px 0 10px;font-size:13px;color:#c8d2d6;opacity:.85}
+  .stack{display:flex;flex-direction:column;gap:8px}
+  .pill{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:10px;background:#0c1016;border:1px solid #27313a}
+  .pill b{color:#dfe7ea}
+  .graphBox{display:flex;flex-direction:column;align-items:center}
+  .graphFrame{width:100%;max-width:720px;aspect-ratio: 2/3;border:0;display:block;border-radius:10px;overflow:hidden;background:#fff}
+  .chartActions{margin-top:10px}
+  .chartActions button{min-width:140px}
+  @media (max-width: 980px){.row{grid-template-columns:1fr}.chartLayout{grid-template-columns:1fr}}
+  .ac-wrap{position:relative}
+  .ac-list{position:absolute;left:0;right:0;top:100%;z-index:30;background:#0b0f14;border:1px solid #2a3641;border-radius:10px;margin-top:6px;overflow:hidden}
+  .ac-item{padding:8px 10px;cursor:pointer}
+  .ac-item:hover{background:#0f151c}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section id="birthScreen" class="card">
+    <h1>Get your free Human Design chart</h1>
+    <p class="hint">Enter your birth data. City suggestions will appear as you type.</p>
+    <div class="row">
+      <div><label for="birthDate">Birth date</label><input id="birthDate" type="date" /></div>
+      <div><label for="birthTime">Birth time</label><input id="birthTime" type="time" /></div>
+      <div class="ac-wrap"><label for="birthPlace">Birth city &amp; country</label><input id="birthPlace" type="text" placeholder="e.g., Tampa, United States"/><div id="placeList" class="ac-list hidden"></div></div>
+    </div>
+    <div class="actions"><button id="generateBtn" class="primary">Generate chart</button><span id="status" class="hint"></span></div>
+  </section>
+  <section id="chartScreen" class="hidden">
+    <div class="chartLayout">
+      <aside class="col"><h2 class="colTitle">Design</h2><div id="designList" class="stack"></div></aside>
+      <main class="col graphBox"><iframe id="graphFrame" class="graphFrame" src="WORKING.html" loading="lazy"></iframe><div class="chartActions"><button id="detailsBtn">Chart details</button></div></main>
+      <aside class="col"><h2 class="colTitle">Personality</h2><div id="personalityList" class="stack"></div></aside>
+    </div>
+  </section>
+</div>
+<script>
+const placeInput=document.getElementById('birthPlace');const placeList=document.getElementById('placeList');let acTimer=null;
+placeInput.addEventListener('input',()=>{const q=placeInput.value.trim();clearTimeout(acTimer);if(q.length<2){placeList.classList.add('hidden');placeList.innerHTML='';return;}acTimer=setTimeout(async()=>{try{const url=new URL('https://nominatim.openstreetmap.org/search');url.searchParams.set('q',q);url.searchParams.set('format','jsonv2');url.searchParams.set('addressdetails','1');url.searchParams.set('limit','8');const resp=await fetch(url.toString(),{headers:{'Accept':'application/json','User-Agent':'DesigningUsChart/1.0'}});const rows=await resp.json();placeList.innerHTML='';rows.forEach(r=>{const a=r.address||{};const city=a.city||a.town||a.village||a.hamlet||r.display_name.split(',')[0];const country=a.country||'';const line=`${city}${country?', '+country:''}`;const div=document.createElement('div');div.className='ac-item';div.textContent=line;div.onclick=()=>{placeInput.value=line;placeList.classList.add('hidden');placeList.innerHTML='';placeInput.dataset.lat=r.lat;placeInput.dataset.lon=r.lon;};placeList.appendChild(div);});placeList.classList.toggle('hidden',rows.length===0);}catch(e){placeList.classList.add('hidden');placeList.innerHTML='';}},250);});document.addEventListener('click',(e)=>{if(!placeList.contains(e.target)&&e.target!==placeInput){placeList.classList.add('hidden');}});
+const birthDate=document.getElementById('birthDate');const birthTime=document.getElementById('birthTime');const statusEl=document.getElementById('status');const graphFrame=document.getElementById('graphFrame');const birthScreen=document.getElementById('birthScreen');const chartScreen=document.getElementById('chartScreen');
+document.getElementById('generateBtn').onclick=async()=>{const date=birthDate.value;const time=birthTime.value||'12:00';const place=placeInput.value.trim();if(!date||!place){statusEl.textContent='Please enter date and city/country.';return;}statusEl.textContent='Calculating…';try{const payload={date,time,place,lat:placeInput.dataset.lat||null,lon:placeInput.dataset.lon||null};const tryFetch=async(url,body)=>{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error('Bad response');return r.json();};let data=null;try{data=await tryFetch('/api/bodygraph',payload);}catch(e){}if(!data){data=await tryFetch('https://api.humandesignapi.nl/v1/bodygraphs',payload);}sessionStorage.setItem('HD_DATA',JSON.stringify(data||{}));sessionStorage.setItem('HD_PLACE',place);sessionStorage.setItem('HD_DATE',date);sessionStorage.setItem('HD_TIME',time);birthScreen.classList.add('hidden');chartScreen.classList.remove('hidden');const send=()=>{try{graphFrame.contentWindow&&graphFrame.contentWindow.applyBodygraph&&graphFrame.contentWindow.applyBodygraph(data);}catch(_){}};if(graphFrame.contentWindow&&graphFrame.contentWindow.applyBodygraph){send();}graphFrame.addEventListener('load',send);renderActivationLists(data);statusEl.textContent='';}catch(err){statusEl.textContent='Error creating chart. Please try again.';}};
+function renderActivationLists(json){const L=document.getElementById('designList');const R=document.getElementById('personalityList');L.innerHTML='';R.innerHTML='';const dActs=(json&&json.design&&(json.design.activations||json.design.planets))||[];const pActs=(json&&json.personality&&(json.personality.activations||json.personality.planets))||[];const mk=(row)=>{const div=document.createElement('div');div.className='pill';const left=document.createElement('b');left.textContent=row.name||row.planet||'—';const right=document.createElement('span');right.textContent=(row.gate?`Gate ${row.gate}`:row.value||'')+(row.line?`.${row.line}`:'');div.append(left,right);return div;};dActs.forEach(r=>L.appendChild(mk(r)));pActs.forEach(r=>R.appendChild(mk(r)));}
+document.getElementById('detailsBtn').onclick=()=>{window.location.href='details.html';};
+</script>
+</body>
+</html>
